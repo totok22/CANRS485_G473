@@ -22,6 +22,8 @@ static volatile uint8_t g_canb_tx_tail;
 static volatile uint8_t g_canb_tx_count;
 static volatile uint32_t g_canb_tx_drop_count;
 static uint8_t g_canc_ready;
+static volatile uint32_t g_canc_rx_count;
+static volatile uint32_t g_canc_rx_error_count;
 static AppCanIoRxCallback g_rx_callback;
 
 static HAL_StatusTypeDef App_CanIo_ConfigFilter(FDCAN_HandleTypeDef *hfdcan);
@@ -39,6 +41,8 @@ HAL_StatusTypeDef App_CanIo_Init(AppCanIoRxCallback rx_callback)
   g_canb_tx_count = 0U;
   g_canb_tx_drop_count = 0U;
   g_canc_ready = 0U;
+  g_canc_rx_count = 0U;
+  g_canc_rx_error_count = 0U;
 
   if (App_CanIo_ConfigFilter(&hfdcan1) != HAL_OK)
   {
@@ -88,6 +92,7 @@ HAL_StatusTypeDef App_CanIo_Init(AppCanIoRxCallback rx_callback)
   if (MCP2518FD_Init(&hspi1) == HAL_OK)
   {
     g_canc_ready = 1U;
+    MCP2518FD_OnInterrupt();
   }
 
   return HAL_OK;
@@ -154,6 +159,23 @@ uint8_t App_CanIo_QueueCanBStd(uint32_t std_id, const uint8_t *data, uint8_t dlc
   __enable_irq();
 
   return 1U;
+}
+
+void App_CanIo_GetStatus(AppCanIoStatus *status)
+{
+  if (status == NULL)
+  {
+    return;
+  }
+
+  __disable_irq();
+  status->canb_tx_count = g_canb_tx_count;
+  status->canb_tx_drop_count = g_canb_tx_drop_count;
+  status->canc_ready = g_canc_ready;
+  status->canc_interrupt_pending = MCP2518FD_HasPendingInterrupt();
+  status->canc_rx_count = g_canc_rx_count;
+  status->canc_rx_error_count = g_canc_rx_error_count;
+  __enable_irq();
 }
 
 void HAL_FDCAN_RxFifo0Callback(FDCAN_HandleTypeDef *hfdcan, uint32_t RxFifo0ITs)
@@ -306,10 +328,16 @@ static void App_CanIo_ServiceMcp2518Rx(void)
     return;
   }
 
+  if (MCP2518FD_HasPendingInterrupt() == 0U)
+  {
+    return;
+  }
+
   while (frames_processed < APP_MCP2518_RX_MAX_FRAMES_PER_POLL)
   {
     if (MCP2518FD_Receive(&frame, &received) != HAL_OK)
     {
+      g_canc_rx_error_count++;
       return;
     }
     if (received == 0U)
@@ -322,6 +350,7 @@ static void App_CanIo_ServiceMcp2518Rx(void)
     {
       g_rx_callback(APP_FDCAN_BUS_CANC, &header, frame.data);
     }
+    g_canc_rx_count++;
     frames_processed++;
   }
 }

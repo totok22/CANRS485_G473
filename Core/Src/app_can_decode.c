@@ -86,53 +86,56 @@ typedef struct
   uint8_t data[8];
 } AppCan2TxFrame;
 
-static volatile AppTelemetryState *g_decode_state;
-static uint8_t g_decode_events;
+typedef struct
+{
+  volatile AppTelemetryState *state;
+  uint8_t events;
+} AppCanDecodeContext;
 
-#define g_app_state (*g_decode_state)
+#define g_app_state (*(context->state))
 
 #if APP_CAN2_ENERGY_METER_MODE != APP_CAN2_ENERGY_METER_MODE_FS
 static uint8_t App_IvtValueIsPlausible(uint32_t std_id, int32_t value);
-static uint8_t App_IvtDecodeResult(uint32_t std_id, const uint8_t *data, int32_t *value);
+static uint8_t App_IvtDecodeResult(AppCanDecodeContext *context, uint32_t std_id, const uint8_t *data, int32_t *value);
 #endif
-static void App_SetProtocol(AppProtocol protocol);
-static void App_RequestFaultRefresh(void);
-static void App_ProcessCan1Rx(const AppCanRxHeader *header, const uint8_t *data);
-static void App_ProcessCan2Rx(const AppCanRxHeader *header, const uint8_t *data);
-static uint8_t App_ProcessCan1Ext(uint32_t ext_id, const uint8_t *data, uint8_t dlc);
-static uint8_t App_ProcessCan2Ext(uint32_t ext_id, const uint8_t *data, uint8_t dlc);
-static uint8_t App_ProcessCan2Std(uint32_t std_id, const uint8_t *data, uint8_t dlc);
-static uint8_t App_ProcessCan2DataLogger(const uint8_t *data, uint8_t dlc, uint32_t now);
-static uint8_t App_ProcessCan2GpsSpeed(const uint8_t *data, uint8_t dlc, uint32_t now);
-static uint8_t App_ProcessImuRaw(const uint8_t *data, uint8_t dlc, uint32_t now);
+static void App_SetProtocol(AppCanDecodeContext *context, AppProtocol protocol);
+static void App_RequestFaultRefresh(AppCanDecodeContext *context);
+static void App_ProcessCan1Rx(AppCanDecodeContext *context, const AppCanRxHeader *header, const uint8_t *data);
+static void App_ProcessCan2Rx(AppCanDecodeContext *context, const AppCanRxHeader *header, const uint8_t *data);
+static uint8_t App_ProcessCan1Ext(AppCanDecodeContext *context, uint32_t ext_id, const uint8_t *data, uint8_t dlc);
+static uint8_t App_ProcessCan2Ext(AppCanDecodeContext *context, uint32_t ext_id, const uint8_t *data, uint8_t dlc);
+static uint8_t App_ProcessCan2Std(AppCanDecodeContext *context, uint32_t std_id, const uint8_t *data, uint8_t dlc);
+static uint8_t App_ProcessCan2DataLogger(AppCanDecodeContext *context, const uint8_t *data, uint8_t dlc, uint32_t now);
+static uint8_t App_ProcessCan2GpsSpeed(AppCanDecodeContext *context, const uint8_t *data, uint8_t dlc, uint32_t now);
+static uint8_t App_ProcessImuRaw(AppCanDecodeContext *context, const uint8_t *data, uint8_t dlc, uint32_t now);
 static uint8_t App_DecodeImuRawForward(const uint8_t *data, uint8_t dlc, AppCan2TxFrame *frame);
-static uint8_t App_ProcessCan2ImuAccel(const uint8_t *data, uint8_t dlc, uint32_t now);
-static uint8_t App_ProcessCan2ImuGyro(const uint8_t *data, uint8_t dlc, uint32_t now);
-static uint8_t App_ProcessCan2ImuYaw(const uint8_t *data, uint8_t dlc, uint32_t now);
-static uint8_t App_ProcessVoltageFrame(uint32_t ext_id, const uint8_t *data, uint8_t dlc, uint32_t now);
-static uint8_t App_ProcessTempFrame(uint32_t ext_id, const uint8_t *data, uint8_t dlc, uint32_t now);
-static uint8_t App_ProcessPackSummary(const uint8_t *data, uint8_t dlc, uint32_t now);
-static uint8_t App_ProcessCellVoltageSum(const uint8_t *data, uint8_t dlc, uint32_t now);
-static uint8_t App_ProcessImdDiag(const uint8_t *data, uint8_t dlc, uint32_t now);
-static uint8_t App_ProcessCellExtrema(const uint8_t *data, uint8_t dlc, uint32_t now);
-static uint8_t App_ProcessTempExtrema(const uint8_t *data, uint8_t dlc, uint32_t now);
-static uint8_t App_ProcessStatusFrame(const uint8_t *data, uint8_t dlc, uint32_t now);
-static uint8_t App_ProcessAlarmFrame(const uint8_t *data, uint8_t dlc, uint32_t now);
-static uint8_t App_ProcessChargerFeedback(const uint8_t *data, uint8_t dlc, uint32_t now);
-static uint8_t App_ProcessCan2PowerStatus(const uint8_t *data, uint8_t dlc, uint32_t now);
-static uint8_t App_ProcessCan2DiagStatus(const uint8_t *data, uint8_t dlc, uint32_t now);
-static uint8_t App_ProcessFsDataloggerStatus(const uint8_t *data, uint8_t dlc, uint32_t now);
+static uint8_t App_ProcessCan2ImuAccel(AppCanDecodeContext *context, const uint8_t *data, uint8_t dlc, uint32_t now);
+static uint8_t App_ProcessCan2ImuGyro(AppCanDecodeContext *context, const uint8_t *data, uint8_t dlc, uint32_t now);
+static uint8_t App_ProcessCan2ImuYaw(AppCanDecodeContext *context, const uint8_t *data, uint8_t dlc, uint32_t now);
+static uint8_t App_ProcessVoltageFrame(AppCanDecodeContext *context, uint32_t ext_id, const uint8_t *data, uint8_t dlc, uint32_t now);
+static uint8_t App_ProcessTempFrame(AppCanDecodeContext *context, uint32_t ext_id, const uint8_t *data, uint8_t dlc, uint32_t now);
+static uint8_t App_ProcessPackSummary(AppCanDecodeContext *context, const uint8_t *data, uint8_t dlc, uint32_t now);
+static uint8_t App_ProcessCellVoltageSum(AppCanDecodeContext *context, const uint8_t *data, uint8_t dlc, uint32_t now);
+static uint8_t App_ProcessImdDiag(AppCanDecodeContext *context, const uint8_t *data, uint8_t dlc, uint32_t now);
+static uint8_t App_ProcessCellExtrema(AppCanDecodeContext *context, const uint8_t *data, uint8_t dlc, uint32_t now);
+static uint8_t App_ProcessTempExtrema(AppCanDecodeContext *context, const uint8_t *data, uint8_t dlc, uint32_t now);
+static uint8_t App_ProcessStatusFrame(AppCanDecodeContext *context, const uint8_t *data, uint8_t dlc, uint32_t now);
+static uint8_t App_ProcessAlarmFrame(AppCanDecodeContext *context, const uint8_t *data, uint8_t dlc, uint32_t now);
+static uint8_t App_ProcessChargerFeedback(AppCanDecodeContext *context, const uint8_t *data, uint8_t dlc, uint32_t now);
+static uint8_t App_ProcessCan2PowerStatus(AppCanDecodeContext *context, const uint8_t *data, uint8_t dlc, uint32_t now);
+static uint8_t App_ProcessCan2DiagStatus(AppCanDecodeContext *context, const uint8_t *data, uint8_t dlc, uint32_t now);
+static uint8_t App_ProcessFsDataloggerStatus(AppCanDecodeContext *context, const uint8_t *data, uint8_t dlc, uint32_t now);
 #if APP_CAN2_ENERGY_METER_MODE != APP_CAN2_ENERGY_METER_MODE_IVT
-static uint8_t App_ProcessFsDataloggerResult(uint32_t std_id, const uint8_t *data, uint8_t dlc, uint32_t now);
+static uint8_t App_ProcessFsDataloggerResult(AppCanDecodeContext *context, uint32_t std_id, const uint8_t *data, uint8_t dlc, uint32_t now);
 #endif
 #if APP_CAN2_ENERGY_METER_MODE == APP_CAN2_ENERGY_METER_MODE_AUTO
-static uint8_t App_ProcessEnergyMeterAutoResult(uint32_t std_id, const uint8_t *data, uint8_t dlc, uint32_t now);
+static uint8_t App_ProcessEnergyMeterAutoResult(AppCanDecodeContext *context, uint32_t std_id, const uint8_t *data, uint8_t dlc, uint32_t now);
 #endif
 #if APP_CAN2_ENERGY_METER_MODE != APP_CAN2_ENERGY_METER_MODE_FS
-static uint8_t App_ProcessIvtResult(uint32_t std_id, const uint8_t *data, uint8_t dlc, uint32_t now);
+static uint8_t App_ProcessIvtResult(AppCanDecodeContext *context, uint32_t std_id, const uint8_t *data, uint8_t dlc, uint32_t now);
 #endif
-static uint8_t App_ProcessCan2MotorFrame(uint32_t std_id, const uint8_t *data, uint8_t dlc, uint32_t now);
-static uint8_t App_ProcessCan2Debug9(const uint8_t *data, uint8_t dlc, uint32_t now);
+static uint8_t App_ProcessCan2MotorFrame(AppCanDecodeContext *context, uint32_t std_id, const uint8_t *data, uint8_t dlc, uint32_t now);
+static uint8_t App_ProcessCan2Debug9(AppCanDecodeContext *context, const uint8_t *data, uint8_t dlc, uint32_t now);
 static uint32_t App_BuildBatteryFaultCode(const uint8_t *data);
 
 uint8_t App_CanDecode_Process(volatile AppTelemetryState *state,
@@ -140,24 +143,26 @@ uint8_t App_CanDecode_Process(volatile AppTelemetryState *state,
                               const AppCanRxHeader *header,
                               const uint8_t *data)
 {
+  AppCanDecodeContext context;
+
   if ((state == NULL) || (header == NULL) || (data == NULL))
   {
     return APP_CAN_DECODE_EVENT_NONE;
   }
 
-  g_decode_state = state;
-  g_decode_events = APP_CAN_DECODE_EVENT_NONE;
+  context.state = state;
+  context.events = APP_CAN_DECODE_EVENT_NONE;
 
   if (bus == APP_FDCAN_BUS_CAN1)
   {
-    App_ProcessCan1Rx(header, data);
+    App_ProcessCan1Rx(&context, header, data);
   }
   else if (bus == APP_FDCAN_BUS_CANB)
   {
-    App_ProcessCan2Rx(header, data);
+    App_ProcessCan2Rx(&context, header, data);
   }
 
-  return g_decode_events;
+  return context.events;
 }
 
 #if APP_CAN2_ENERGY_METER_MODE != APP_CAN2_ENERGY_METER_MODE_FS
@@ -189,7 +194,7 @@ static uint8_t App_IvtValueIsPlausible(uint32_t std_id, int32_t value)
   return 0U;
 }
 
-static uint8_t App_IvtDecodeResult(uint32_t std_id, const uint8_t *data, int32_t *value)
+static uint8_t App_IvtDecodeResult(AppCanDecodeContext *context, uint32_t std_id, const uint8_t *data, int32_t *value)
 {
   int32_t be_value;
   int32_t le_value;
@@ -245,7 +250,7 @@ static uint8_t App_IvtDecodeResult(uint32_t std_id, const uint8_t *data, int32_t
 }
 #endif
 
-static void App_SetProtocol(AppProtocol protocol)
+static void App_SetProtocol(AppCanDecodeContext *context, AppProtocol protocol)
 {
   if ((protocol != APP_PROTOCOL_UNKNOWN) && (g_app_state.protocol != protocol))
   {
@@ -254,16 +259,16 @@ static void App_SetProtocol(AppProtocol protocol)
 }
 
 
-static void App_RequestFaultRefresh(void)
+static void App_RequestFaultRefresh(AppCanDecodeContext *context)
 {
-  g_decode_events |= APP_CAN_DECODE_EVENT_FAULT_REFRESH;
+  context->events |= APP_CAN_DECODE_EVENT_FAULT_REFRESH;
 }
 
-static void App_ProcessCan1Rx(const AppCanRxHeader *header, const uint8_t *data)
+static void App_ProcessCan1Rx(AppCanDecodeContext *context, const AppCanRxHeader *header, const uint8_t *data)
 {
   if (header->IDE == APP_CAN_ID_EXT)
   {
-    if (App_ProcessCan1Ext(header->ExtId, data, header->DLC) != 0U)
+    if (App_ProcessCan1Ext(context, header->ExtId, data, header->DLC) != 0U)
     {
       g_app_state.can1_seen = 1U;
     }
@@ -272,7 +277,7 @@ static void App_ProcessCan1Rx(const AppCanRxHeader *header, const uint8_t *data)
 
   if ((header->IDE == APP_CAN_ID_STD) && (header->StdId == APP_CAN1_HALL_ID) && (header->DLC >= 8U))
   {
-    App_SetProtocol(APP_PROTOCOL_MODERN);
+    App_SetProtocol(context, APP_PROTOCOL_MODERN);
     g_app_state.hall_current_ma = App_ReadBe32Signed(data);
     g_app_state.hall_error = (uint8_t)(data[4] & 0x01U);
     g_app_state.hall_error_code = (uint8_t)((data[4] >> 1) & 0x7FU);
@@ -280,36 +285,36 @@ static void App_ProcessCan1Rx(const AppCanRxHeader *header, const uint8_t *data)
     g_app_state.hall_sw_version = data[7];
     g_app_state.hall_updated_ms = HAL_GetTick();
     g_app_state.can1_seen = 1U;
-    App_RequestFaultRefresh();
+    App_RequestFaultRefresh(context);
   }
   else if ((header->IDE == APP_CAN_ID_STD) && (header->StdId == APP_IMU_RAW_ID))
   {
-    if (App_ProcessImuRaw(data, header->DLC, HAL_GetTick()) != 0U)
+    if (App_ProcessImuRaw(context, data, header->DLC, HAL_GetTick()) != 0U)
     {
       g_app_state.can1_seen = 1U;
     }
   }
 }
 
-static void App_ProcessCan2Rx(const AppCanRxHeader *header, const uint8_t *data)
+static void App_ProcessCan2Rx(AppCanDecodeContext *context, const AppCanRxHeader *header, const uint8_t *data)
 {
   if (header->IDE == APP_CAN_ID_EXT)
   {
-    if (App_ProcessCan2Ext(header->ExtId, data, header->DLC) != 0U)
+    if (App_ProcessCan2Ext(context, header->ExtId, data, header->DLC) != 0U)
     {
       g_app_state.can2_seen = 1U;
     }
   }
   else if (header->IDE == APP_CAN_ID_STD)
   {
-    if (App_ProcessCan2Std(header->StdId, data, header->DLC) != 0U)
+    if (App_ProcessCan2Std(context, header->StdId, data, header->DLC) != 0U)
     {
       g_app_state.can2_seen = 1U;
     }
   }
 }
 
-static uint8_t App_ProcessCan1Ext(uint32_t ext_id, const uint8_t *data, uint8_t dlc)
+static uint8_t App_ProcessCan1Ext(AppCanDecodeContext *context, uint32_t ext_id, const uint8_t *data, uint8_t dlc)
 {
   uint32_t now = HAL_GetTick();
 
@@ -317,46 +322,46 @@ static uint8_t App_ProcessCan1Ext(uint32_t ext_id, const uint8_t *data, uint8_t 
       (ext_id < (APP_CAN1_BASE_VOLTAGE_ID + (36UL << 16))) &&
       (((ext_id - APP_CAN1_BASE_VOLTAGE_ID) & 0xFFFFU) == 0U))
   {
-    return App_ProcessVoltageFrame(ext_id, data, dlc, now);
+    return App_ProcessVoltageFrame(context, ext_id, data, dlc, now);
   }
 
   if ((ext_id >= APP_CAN1_BASE_TEMP_ID) &&
       (ext_id < (APP_CAN1_BASE_TEMP_ID + (APP_MODULE_COUNT << 16))) &&
       (((ext_id - APP_CAN1_BASE_TEMP_ID) & 0xFFFFU) == 0U))
   {
-    return App_ProcessTempFrame(ext_id, data, dlc, now);
+    return App_ProcessTempFrame(context, ext_id, data, dlc, now);
   }
 
   switch (ext_id)
   {
     case APP_CAN1_PACK_SUMMARY_ID:
-      return App_ProcessPackSummary(data, dlc, now);
+      return App_ProcessPackSummary(context, data, dlc, now);
 
     case APP_CAN1_CELL_SUM_ID:
-      App_SetProtocol(APP_PROTOCOL_MODERN);
-      return App_ProcessCellVoltageSum(data, dlc, now);
+      App_SetProtocol(context, APP_PROTOCOL_MODERN);
+      return App_ProcessCellVoltageSum(context, data, dlc, now);
 
     case APP_CAN1_IMD_DIAG_ID:
-      App_SetProtocol(APP_PROTOCOL_MODERN);
-      return App_ProcessImdDiag(data, dlc, now);
+      App_SetProtocol(context, APP_PROTOCOL_MODERN);
+      return App_ProcessImdDiag(context, data, dlc, now);
 
     case APP_CAN1_CELL_EXTREMA_ID:
-      return App_ProcessCellExtrema(data, dlc, now);
+      return App_ProcessCellExtrema(context, data, dlc, now);
 
     case APP_CAN1_TEMP_EXTREMA_ID:
-      return App_ProcessTempExtrema(data, dlc, now);
+      return App_ProcessTempExtrema(context, data, dlc, now);
 
     case APP_CAN1_STATUS_ID:
-      return App_ProcessStatusFrame(data, dlc, now);
+      return App_ProcessStatusFrame(context, data, dlc, now);
 
     case APP_CAN1_ALARM_ID:
-      return App_ProcessAlarmFrame(data, dlc, now);
+      return App_ProcessAlarmFrame(context, data, dlc, now);
 
     case APP_CAN1_TOOL_FAULT_RESET_ID:
     case APP_CAN1_TOOL_ADC_CAL_ID:
     case APP_CAN1_TOOL_CURRENT_DIR_ID:
     case APP_CAN1_TOOL_RTC_SET_ID:
-      App_SetProtocol(APP_PROTOCOL_MODERN);
+      App_SetProtocol(context, APP_PROTOCOL_MODERN);
       return 0U;
 
     default:
@@ -366,52 +371,52 @@ static uint8_t App_ProcessCan1Ext(uint32_t ext_id, const uint8_t *data, uint8_t 
   return 0U;
 }
 
-static uint8_t App_ProcessCan2Ext(uint32_t ext_id, const uint8_t *data, uint8_t dlc)
+static uint8_t App_ProcessCan2Ext(AppCanDecodeContext *context, uint32_t ext_id, const uint8_t *data, uint8_t dlc)
 {
   if (ext_id == APP_CAN2_CHARGER_FB_ID)
   {
-    return App_ProcessChargerFeedback(data, dlc, HAL_GetTick());
+    return App_ProcessChargerFeedback(context, data, dlc, HAL_GetTick());
   }
 
   return 0U;
 }
 
-static uint8_t App_ProcessCan2Std(uint32_t std_id, const uint8_t *data, uint8_t dlc)
+static uint8_t App_ProcessCan2Std(AppCanDecodeContext *context, uint32_t std_id, const uint8_t *data, uint8_t dlc)
 {
   switch (std_id)
   {
     case APP_CAN2_GPS_SPEED_ID:
-      return App_ProcessCan2GpsSpeed(data, dlc, HAL_GetTick());
+      return App_ProcessCan2GpsSpeed(context, data, dlc, HAL_GetTick());
 
     case APP_CAN2_DATALOGGER_ID:
-      return App_ProcessCan2DataLogger(data, dlc, HAL_GetTick());
+      return App_ProcessCan2DataLogger(context, data, dlc, HAL_GetTick());
 
     case APP_IMU_RAW_ID:
-      return App_ProcessImuRaw(data, dlc, HAL_GetTick());
+      return App_ProcessImuRaw(context, data, dlc, HAL_GetTick());
 
     case APP_IMU_ACCEL_ID:
-      return App_ProcessCan2ImuAccel(data, dlc, HAL_GetTick());
+      return App_ProcessCan2ImuAccel(context, data, dlc, HAL_GetTick());
 
     case APP_IMU_GYRO_ID:
-      return App_ProcessCan2ImuGyro(data, dlc, HAL_GetTick());
+      return App_ProcessCan2ImuGyro(context, data, dlc, HAL_GetTick());
 
     case APP_IMU_YAW_ID:
-      return App_ProcessCan2ImuYaw(data, dlc, HAL_GetTick());
+      return App_ProcessCan2ImuYaw(context, data, dlc, HAL_GetTick());
 
     case APP_CAN2_IVT_CURRENT_ID:
     case APP_CAN2_IVT_U1_ID:
     case APP_CAN2_IVT_POWER_ID:
     case APP_CAN2_IVT_WH_ID:
 #if APP_CAN2_ENERGY_METER_MODE == APP_CAN2_ENERGY_METER_MODE_FS
-      return App_ProcessFsDataloggerResult(std_id, data, dlc, HAL_GetTick());
+      return App_ProcessFsDataloggerResult(context, std_id, data, dlc, HAL_GetTick());
 #elif APP_CAN2_ENERGY_METER_MODE == APP_CAN2_ENERGY_METER_MODE_IVT
-      return App_ProcessIvtResult(std_id, data, dlc, HAL_GetTick());
+      return App_ProcessIvtResult(context, std_id, data, dlc, HAL_GetTick());
 #else
-      return App_ProcessEnergyMeterAutoResult(std_id, data, dlc, HAL_GetTick());
+      return App_ProcessEnergyMeterAutoResult(context, std_id, data, dlc, HAL_GetTick());
 #endif
 
     case APP_CAN2_FS_DATALOGGER_STATUS_ID:
-      return App_ProcessFsDataloggerStatus(data, dlc, HAL_GetTick());
+      return App_ProcessFsDataloggerStatus(context, data, dlc, HAL_GetTick());
 
     case APP_CAN2_DEBUG2_ID:
     case APP_CAN2_DEBUG3_ID:
@@ -420,17 +425,17 @@ static uint8_t App_ProcessCan2Std(uint32_t std_id, const uint8_t *data, uint8_t 
     case APP_CAN2_DEBUG6_ID:
     case APP_CAN2_DEBUG7_ID:
     case APP_CAN2_DEBUG8_ID:
-      return App_ProcessCan2MotorFrame(std_id, data, dlc, HAL_GetTick());
+      return App_ProcessCan2MotorFrame(context, std_id, data, dlc, HAL_GetTick());
 
     case APP_CAN2_DEBUG9_ID:
-      return App_ProcessCan2Debug9(data, dlc, HAL_GetTick());
+      return App_ProcessCan2Debug9(context, data, dlc, HAL_GetTick());
 
     case APP_CAN2_POWER_STATUS_ID:
-      return App_ProcessCan2PowerStatus(data, dlc, HAL_GetTick());
+      return App_ProcessCan2PowerStatus(context, data, dlc, HAL_GetTick());
 
     case APP_CAN2_DIAG_STATUS_ID:
-      App_SetProtocol(APP_PROTOCOL_MODERN);
-      return App_ProcessCan2DiagStatus(data, dlc, HAL_GetTick());
+      App_SetProtocol(context, APP_PROTOCOL_MODERN);
+      return App_ProcessCan2DiagStatus(context, data, dlc, HAL_GetTick());
 
     default:
       break;
@@ -439,7 +444,7 @@ static uint8_t App_ProcessCan2Std(uint32_t std_id, const uint8_t *data, uint8_t 
   return 0U;
 }
 
-static uint8_t App_ProcessCan2DataLogger(const uint8_t *data, uint8_t dlc, uint32_t now)
+static uint8_t App_ProcessCan2DataLogger(AppCanDecodeContext *context, const uint8_t *data, uint8_t dlc, uint32_t now)
 {
   if (dlc < 6U)
   {
@@ -453,7 +458,7 @@ static uint8_t App_ProcessCan2DataLogger(const uint8_t *data, uint8_t dlc, uint3
   return 1U;
 }
 
-static uint8_t App_ProcessCan2GpsSpeed(const uint8_t *data, uint8_t dlc, uint32_t now)
+static uint8_t App_ProcessCan2GpsSpeed(AppCanDecodeContext *context, const uint8_t *data, uint8_t dlc, uint32_t now)
 {
   if (dlc < 2U)
   {
@@ -465,7 +470,7 @@ static uint8_t App_ProcessCan2GpsSpeed(const uint8_t *data, uint8_t dlc, uint32_
   return 1U;
 }
 
-static uint8_t App_ProcessImuRaw(const uint8_t *data, uint8_t dlc, uint32_t now)
+static uint8_t App_ProcessImuRaw(AppCanDecodeContext *context, const uint8_t *data, uint8_t dlc, uint32_t now)
 {
   AppCan2TxFrame forward_frame;
   uint8_t queued;
@@ -488,19 +493,19 @@ static uint8_t App_ProcessImuRaw(const uint8_t *data, uint8_t dlc, uint32_t now)
 
     case APP_IMU_ACCEL_ID:
     {
-      uint8_t processed = App_ProcessCan2ImuAccel(forward_frame.data, forward_frame.dlc, now);
+      uint8_t processed = App_ProcessCan2ImuAccel(context, forward_frame.data, forward_frame.dlc, now);
       return (uint8_t)(((queued != 0U) && (processed != 0U)) ? 1U : 0U);
     }
 
     case APP_IMU_GYRO_ID:
     {
-      uint8_t processed = App_ProcessCan2ImuGyro(forward_frame.data, forward_frame.dlc, now);
+      uint8_t processed = App_ProcessCan2ImuGyro(context, forward_frame.data, forward_frame.dlc, now);
       return (uint8_t)(((queued != 0U) && (processed != 0U)) ? 1U : 0U);
     }
 
     case APP_IMU_YAW_ID:
     {
-      uint8_t processed = App_ProcessCan2ImuYaw(forward_frame.data, forward_frame.dlc, now);
+      uint8_t processed = App_ProcessCan2ImuYaw(context, forward_frame.data, forward_frame.dlc, now);
       return (uint8_t)(((queued != 0U) && (processed != 0U)) ? 1U : 0U);
     }
 
@@ -599,7 +604,7 @@ static uint8_t App_DecodeImuRawForward(const uint8_t *data, uint8_t dlc, AppCan2
   return 1U;
 }
 
-static uint8_t App_ProcessCan2ImuAccel(const uint8_t *data, uint8_t dlc, uint32_t now)
+static uint8_t App_ProcessCan2ImuAccel(AppCanDecodeContext *context, const uint8_t *data, uint8_t dlc, uint32_t now)
 {
   if (dlc < 6U)
   {
@@ -613,7 +618,7 @@ static uint8_t App_ProcessCan2ImuAccel(const uint8_t *data, uint8_t dlc, uint32_
   return 1U;
 }
 
-static uint8_t App_ProcessCan2ImuGyro(const uint8_t *data, uint8_t dlc, uint32_t now)
+static uint8_t App_ProcessCan2ImuGyro(AppCanDecodeContext *context, const uint8_t *data, uint8_t dlc, uint32_t now)
 {
   if (dlc < 6U)
   {
@@ -625,7 +630,7 @@ static uint8_t App_ProcessCan2ImuGyro(const uint8_t *data, uint8_t dlc, uint32_t
   return 1U;
 }
 
-static uint8_t App_ProcessCan2ImuYaw(const uint8_t *data, uint8_t dlc, uint32_t now)
+static uint8_t App_ProcessCan2ImuYaw(AppCanDecodeContext *context, const uint8_t *data, uint8_t dlc, uint32_t now)
 {
   if (dlc < 2U)
   {
@@ -638,7 +643,7 @@ static uint8_t App_ProcessCan2ImuYaw(const uint8_t *data, uint8_t dlc, uint32_t 
 }
 
 #if APP_CAN2_ENERGY_METER_MODE == APP_CAN2_ENERGY_METER_MODE_AUTO
-static uint8_t App_ProcessEnergyMeterAutoResult(uint32_t std_id, const uint8_t *data, uint8_t dlc, uint32_t now)
+static uint8_t App_ProcessEnergyMeterAutoResult(AppCanDecodeContext *context, uint32_t std_id, const uint8_t *data, uint8_t dlc, uint32_t now)
 {
   int32_t be_value;
   int32_t le_value;
@@ -653,7 +658,7 @@ static uint8_t App_ProcessEnergyMeterAutoResult(uint32_t std_id, const uint8_t *
   if (App_IsFresh(now, g_app_state.fs_status_updated_ms) != 0U)
   {
     g_app_state.energy_meter_auto_source = APP_ENERGY_METER_SOURCE_FS;
-    return App_ProcessFsDataloggerResult(std_id, data, dlc, now);
+    return App_ProcessFsDataloggerResult(context, std_id, data, dlc, now);
   }
 
   if (g_app_state.energy_meter_auto_source == APP_ENERGY_METER_SOURCE_FS)
@@ -661,7 +666,7 @@ static uint8_t App_ProcessEnergyMeterAutoResult(uint32_t std_id, const uint8_t *
     be_value = App_ReadBe32Signed(&data[2]);
     if (App_IvtValueIsPlausible(std_id, be_value) != 0U)
     {
-      return App_ProcessFsDataloggerResult(std_id, data, dlc, now);
+      return App_ProcessFsDataloggerResult(context, std_id, data, dlc, now);
     }
     g_app_state.energy_meter_auto_source = APP_ENERGY_METER_SOURCE_UNKNOWN;
   }
@@ -672,7 +677,7 @@ static uint8_t App_ProcessEnergyMeterAutoResult(uint32_t std_id, const uint8_t *
     if (App_IvtValueIsPlausible(std_id, le_value) != 0U)
     {
       g_app_state.ivt_byte_order = APP_IVT_BYTE_ORDER_LE;
-      return App_ProcessIvtResult(std_id, data, dlc, now);
+      return App_ProcessIvtResult(context, std_id, data, dlc, now);
     }
     g_app_state.energy_meter_auto_source = APP_ENERGY_METER_SOURCE_UNKNOWN;
   }
@@ -685,14 +690,14 @@ static uint8_t App_ProcessEnergyMeterAutoResult(uint32_t std_id, const uint8_t *
   if ((be_plausible != 0U) && (le_plausible == 0U))
   {
     g_app_state.energy_meter_auto_source = APP_ENERGY_METER_SOURCE_FS;
-    return App_ProcessFsDataloggerResult(std_id, data, dlc, now);
+    return App_ProcessFsDataloggerResult(context, std_id, data, dlc, now);
   }
 
   if ((le_plausible != 0U) && (be_plausible == 0U))
   {
     g_app_state.energy_meter_auto_source = APP_ENERGY_METER_SOURCE_IVT;
     g_app_state.ivt_byte_order = APP_IVT_BYTE_ORDER_LE;
-    return App_ProcessIvtResult(std_id, data, dlc, now);
+    return App_ProcessIvtResult(context, std_id, data, dlc, now);
   }
 
   return 0U;
@@ -700,7 +705,7 @@ static uint8_t App_ProcessEnergyMeterAutoResult(uint32_t std_id, const uint8_t *
 #endif
 
 #if APP_CAN2_ENERGY_METER_MODE != APP_CAN2_ENERGY_METER_MODE_FS
-static uint8_t App_ProcessIvtResult(uint32_t std_id, const uint8_t *data, uint8_t dlc, uint32_t now)
+static uint8_t App_ProcessIvtResult(AppCanDecodeContext *context, uint32_t std_id, const uint8_t *data, uint8_t dlc, uint32_t now)
 {
   uint8_t mux;
   uint8_t state;
@@ -713,7 +718,7 @@ static uint8_t App_ProcessIvtResult(uint32_t std_id, const uint8_t *data, uint8_
 
   mux = data[0];
   state = (uint8_t)((data[1] >> 4) & 0x0FU);
-  if (App_IvtDecodeResult(std_id, &data[2], &value) == 0U)
+  if (App_IvtDecodeResult(context, std_id, &data[2], &value) == 0U)
   {
     return 0U;
   }
@@ -772,7 +777,7 @@ static uint8_t App_ProcessIvtResult(uint32_t std_id, const uint8_t *data, uint8_
 }
 #endif
 
-static uint8_t App_ProcessFsDataloggerStatus(const uint8_t *data, uint8_t dlc, uint32_t now)
+static uint8_t App_ProcessFsDataloggerStatus(AppCanDecodeContext *context, const uint8_t *data, uint8_t dlc, uint32_t now)
 {
   uint8_t status_bits;
 
@@ -799,7 +804,7 @@ static uint8_t App_ProcessFsDataloggerStatus(const uint8_t *data, uint8_t dlc, u
 }
 
 #if APP_CAN2_ENERGY_METER_MODE != APP_CAN2_ENERGY_METER_MODE_IVT
-static uint8_t App_ProcessFsDataloggerResult(uint32_t std_id, const uint8_t *data, uint8_t dlc, uint32_t now)
+static uint8_t App_ProcessFsDataloggerResult(AppCanDecodeContext *context, uint32_t std_id, const uint8_t *data, uint8_t dlc, uint32_t now)
 {
   uint8_t mux;
   uint8_t state;
@@ -879,7 +884,7 @@ static uint8_t App_ProcessFsDataloggerResult(uint32_t std_id, const uint8_t *dat
 }
 #endif
 
-static uint8_t App_ProcessCan2MotorFrame(uint32_t std_id, const uint8_t *data, uint8_t dlc, uint32_t now)
+static uint8_t App_ProcessCan2MotorFrame(AppCanDecodeContext *context, uint32_t std_id, const uint8_t *data, uint8_t dlc, uint32_t now)
 {
   if (dlc < 8U)
   {
@@ -947,7 +952,7 @@ static uint8_t App_ProcessCan2MotorFrame(uint32_t std_id, const uint8_t *data, u
   return 0U;
 }
 
-static uint8_t App_ProcessCan2Debug9(const uint8_t *data, uint8_t dlc, uint32_t now)
+static uint8_t App_ProcessCan2Debug9(AppCanDecodeContext *context, const uint8_t *data, uint8_t dlc, uint32_t now)
 {
   uint8_t raw_mode;
 
@@ -970,7 +975,7 @@ static uint8_t App_ProcessCan2Debug9(const uint8_t *data, uint8_t dlc, uint32_t 
   return 1U;
 }
 
-static uint8_t App_ProcessVoltageFrame(uint32_t ext_id, const uint8_t *data, uint8_t dlc, uint32_t now)
+static uint8_t App_ProcessVoltageFrame(AppCanDecodeContext *context, uint32_t ext_id, const uint8_t *data, uint8_t dlc, uint32_t now)
 {
   uint32_t frame_no = (ext_id - APP_CAN1_BASE_VOLTAGE_ID) >> 16;
   uint32_t module_idx;
@@ -1013,7 +1018,7 @@ static uint8_t App_ProcessVoltageFrame(uint32_t ext_id, const uint8_t *data, uin
   return 1U;
 }
 
-static uint8_t App_ProcessTempFrame(uint32_t ext_id, const uint8_t *data, uint8_t dlc, uint32_t now)
+static uint8_t App_ProcessTempFrame(AppCanDecodeContext *context, uint32_t ext_id, const uint8_t *data, uint8_t dlc, uint32_t now)
 {
   uint32_t module_idx = (ext_id - APP_CAN1_BASE_TEMP_ID) >> 16;
   uint32_t base_idx;
@@ -1050,7 +1055,7 @@ static uint8_t App_ProcessTempFrame(uint32_t ext_id, const uint8_t *data, uint8_
   return 1U;
 }
 
-static uint8_t App_ProcessPackSummary(const uint8_t *data, uint8_t dlc, uint32_t now)
+static uint8_t App_ProcessPackSummary(AppCanDecodeContext *context, const uint8_t *data, uint8_t dlc, uint32_t now)
 {
   if (dlc < 7U)
   {
@@ -1067,7 +1072,7 @@ static uint8_t App_ProcessPackSummary(const uint8_t *data, uint8_t dlc, uint32_t
   return 1U;
 }
 
-static uint8_t App_ProcessCellVoltageSum(const uint8_t *data, uint8_t dlc, uint32_t now)
+static uint8_t App_ProcessCellVoltageSum(AppCanDecodeContext *context, const uint8_t *data, uint8_t dlc, uint32_t now)
 {
   if (dlc < 2U)
   {
@@ -1079,7 +1084,7 @@ static uint8_t App_ProcessCellVoltageSum(const uint8_t *data, uint8_t dlc, uint3
   return 1U;
 }
 
-static uint8_t App_ProcessImdDiag(const uint8_t *data, uint8_t dlc, uint32_t now)
+static uint8_t App_ProcessImdDiag(AppCanDecodeContext *context, const uint8_t *data, uint8_t dlc, uint32_t now)
 {
   if (dlc < 8U)
   {
@@ -1091,7 +1096,7 @@ static uint8_t App_ProcessImdDiag(const uint8_t *data, uint8_t dlc, uint32_t now
   return 1U;
 }
 
-static uint8_t App_ProcessCellExtrema(const uint8_t *data, uint8_t dlc, uint32_t now)
+static uint8_t App_ProcessCellExtrema(AppCanDecodeContext *context, const uint8_t *data, uint8_t dlc, uint32_t now)
 {
   if (dlc < 6U)
   {
@@ -1106,7 +1111,7 @@ static uint8_t App_ProcessCellExtrema(const uint8_t *data, uint8_t dlc, uint32_t
   return 1U;
 }
 
-static uint8_t App_ProcessTempExtrema(const uint8_t *data, uint8_t dlc, uint32_t now)
+static uint8_t App_ProcessTempExtrema(AppCanDecodeContext *context, const uint8_t *data, uint8_t dlc, uint32_t now)
 {
   if (dlc < 5U)
   {
@@ -1122,7 +1127,7 @@ static uint8_t App_ProcessTempExtrema(const uint8_t *data, uint8_t dlc, uint32_t
   return 1U;
 }
 
-static uint8_t App_ProcessStatusFrame(const uint8_t *data, uint8_t dlc, uint32_t now)
+static uint8_t App_ProcessStatusFrame(AppCanDecodeContext *context, const uint8_t *data, uint8_t dlc, uint32_t now)
 {
   if (dlc < 8U)
   {
@@ -1141,7 +1146,7 @@ static uint8_t App_ProcessStatusFrame(const uint8_t *data, uint8_t dlc, uint32_t
   return 1U;
 }
 
-static uint8_t App_ProcessAlarmFrame(const uint8_t *data, uint8_t dlc, uint32_t now)
+static uint8_t App_ProcessAlarmFrame(AppCanDecodeContext *context, const uint8_t *data, uint8_t dlc, uint32_t now)
 {
   if (dlc < 6U)
   {
@@ -1152,11 +1157,11 @@ static uint8_t App_ProcessAlarmFrame(const uint8_t *data, uint8_t dlc, uint32_t 
   g_app_state.slave_offline_mask = (uint8_t)((((uint8_t)(data[4] >> 1) & 0x03U) << 4) |
                                              (((uint8_t)(data[5] >> 1) & 0x0FU)));
   g_app_state.alarm_updated_ms = now;
-  App_RequestFaultRefresh();
+  App_RequestFaultRefresh(context);
   return 1U;
 }
 
-static uint8_t App_ProcessChargerFeedback(const uint8_t *data, uint8_t dlc, uint32_t now)
+static uint8_t App_ProcessChargerFeedback(AppCanDecodeContext *context, const uint8_t *data, uint8_t dlc, uint32_t now)
 {
   if (dlc < 5U)
   {
@@ -1170,7 +1175,7 @@ static uint8_t App_ProcessChargerFeedback(const uint8_t *data, uint8_t dlc, uint
   return 1U;
 }
 
-static uint8_t App_ProcessCan2PowerStatus(const uint8_t *data, uint8_t dlc, uint32_t now)
+static uint8_t App_ProcessCan2PowerStatus(AppCanDecodeContext *context, const uint8_t *data, uint8_t dlc, uint32_t now)
 {
   if (dlc < 8U)
   {
@@ -1186,7 +1191,7 @@ static uint8_t App_ProcessCan2PowerStatus(const uint8_t *data, uint8_t dlc, uint
   return 1U;
 }
 
-static uint8_t App_ProcessCan2DiagStatus(const uint8_t *data, uint8_t dlc, uint32_t now)
+static uint8_t App_ProcessCan2DiagStatus(AppCanDecodeContext *context, const uint8_t *data, uint8_t dlc, uint32_t now)
 {
   if (dlc < 8U)
   {
@@ -1200,7 +1205,7 @@ static uint8_t App_ProcessCan2DiagStatus(const uint8_t *data, uint8_t dlc, uint3
   g_app_state.can2_error_rom_low16 = App_ReadLe16(&data[5]);
   g_app_state.slave_offline_mask = (uint8_t)(data[7] & 0x3FU);
   g_app_state.can2_diag_updated_ms = now;
-  App_RequestFaultRefresh();
+  App_RequestFaultRefresh(context);
   return 1U;
 }
 
@@ -1230,4 +1235,3 @@ static uint32_t App_BuildBatteryFaultCode(const uint8_t *data)
 
   return faults;
 }
-
