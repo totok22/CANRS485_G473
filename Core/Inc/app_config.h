@@ -8,4 +8,7 @@
 #define APP_MODE_CMD_SKIDPAD    50U
 #define APP_MODE_CMD_ENDURANCE  51U
 
+#define APP_COMMAND_RX_BUFFER_SIZE 16U
+#define APP_COMMAND_RX_IDLE_MS     20U
+
 #endif /* __APP_CONFIG_H__ */

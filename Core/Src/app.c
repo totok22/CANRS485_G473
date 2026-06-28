@@ -6,8 +6,8 @@
 #include <stdio.h>
 #include <string.h>
 
-#include "app_command_parser.h"
 #include "app_can_io.h"
+#include "app_command_io.h"
 #include "app_config.h"
 #include "app_utils.h"
 #include "gpio.h"
@@ -109,9 +109,6 @@
 #define APP_DEBUG_DUMP_COUNT            8U
 #define APP_DEBUG_CLI_BUFFER_SIZE       32U
 #define APP_DEBUG_CAN_ID_COUNTER_COUNT  16U
-#define APP_COMMAND_RX_BUFFER_SIZE      16U
-#define APP_COMMAND_RX_IDLE_MS          20U
-
 #define APP_IMU_RAW_HEADER              0x55U
 #define APP_IMU_RAW_SUBTYPE_TIME        0x50U
 #define APP_IMU_RAW_SUBTYPE_ACCEL       0x51U
@@ -331,14 +328,6 @@ static volatile char g_cli_rx_buffer[APP_DEBUG_CLI_BUFFER_SIZE];
 static volatile uint8_t g_cli_rx_length;
 static volatile char g_cli_command_buffer[APP_DEBUG_CLI_BUFFER_SIZE];
 static volatile uint8_t g_cli_command_ready;
-static volatile uint8_t g_command_rx_byte;
-static volatile uint8_t g_command_rx_buffer[APP_COMMAND_RX_BUFFER_SIZE];
-static volatile uint8_t g_command_rx_length;
-static volatile uint8_t g_command_rx_ready;
-static volatile uint8_t g_command_rx_overflow;
-static volatile uint32_t g_command_rx_updated_ms;
-static uint8_t g_command_pending_value;
-static uint8_t g_command_pending;
 #if APP_DEBUG_CLI_ENABLE
 static uint8_t g_debug_last_command_bytes[APP_COMMAND_RX_BUFFER_SIZE];
 static uint8_t g_debug_last_command_length;
@@ -379,11 +368,6 @@ static void App_DebugRecordCanId(uint8_t bus_index, uint8_t is_extended_id, uint
 static void App_DebugRecordCommandRx(const uint8_t *data, uint8_t length, uint8_t parse_ok, uint8_t command_value);
 static void App_DebugRecordModeTx(uint8_t command_value, HAL_StatusTypeDef status, uint32_t now);
 #endif
-static void App_CommandPoll(uint32_t now);
-static void App_CommandRxByte(uint8_t rx);
-static void App_CommandQueue(uint8_t command_value);
-static void App_CommandServiceTx(void);
-static void App_CommandRestartRx(void);
 static HAL_StatusTypeDef App_SendModeCommand(uint8_t command_value);
 static void App_ProcessCanRx(AppFdcanBus bus, const AppCanRxHeader *header, const uint8_t *data);
 static void App_ProcessCan1Rx(const AppCanRxHeader *header, const uint8_t *data);
@@ -459,12 +443,6 @@ void App_Init(void)
   g_can_id_counter_count = 0U;
   g_cli_rx_length = 0U;
   g_cli_command_ready = 0U;
-  g_command_rx_length = 0U;
-  g_command_rx_ready = 0U;
-  g_command_rx_overflow = 0U;
-  g_command_rx_updated_ms = 0U;
-  g_command_pending_value = 0U;
-  g_command_pending = 0U;
 #if APP_DEBUG_CLI_ENABLE
   g_debug_last_command_length = 0U;
   g_debug_last_command_parse_ok = 0U;
@@ -486,16 +464,24 @@ void App_Init(void)
   }
 
 #if APP_DEBUG_CLI_ENABLE
+  if (App_CommandIo_Init(App_SendModeCommand, App_DebugRecordCommandRx, App_DebugRecordModeTx) != HAL_OK)
+  {
+    Error_Handler();
+  }
+#else
+  if (App_CommandIo_Init(App_SendModeCommand, NULL, NULL) != HAL_OK)
+  {
+    Error_Handler();
+  }
+#endif
+
+#if APP_DEBUG_CLI_ENABLE
   if (HAL_UART_Receive_IT(&huart1, (uint8_t *)&g_cli_rx_byte, 1U) != HAL_OK)
   {
     Error_Handler();
   }
 #endif
 
-  if (HAL_UART_Receive_IT(&huart2, (uint8_t *)&g_command_rx_byte, 1U) != HAL_OK)
-  {
-    Error_Handler();
-  }
 }
 
 void App_Run(void)
@@ -505,8 +491,7 @@ void App_Run(void)
 
   App_UpdateStatusLed(now);
   App_DebugPollCli();
-  App_CommandPoll(now);
-  App_CommandServiceTx();
+  App_CommandIo_Poll(now);
   App_CanIo_Service();
 
   if ((g_app_state.can1_seen == 0U) && (g_app_state.can2_seen == 0U))
@@ -1028,126 +1013,18 @@ static void App_DebugRecordModeTx(uint8_t command_value, HAL_StatusTypeDef statu
 }
 #endif
 
-static void App_CommandPoll(uint32_t now)
-{
-  uint8_t buffer[APP_COMMAND_RX_BUFFER_SIZE];
-  uint8_t length = 0U;
-  uint8_t ready = 0U;
-  uint8_t command_value = 0U;
-  uint8_t parse_ok;
-
-  __disable_irq();
-  if ((g_command_rx_ready != 0U) ||
-      ((g_command_rx_length > 0U) && ((uint32_t)(now - g_command_rx_updated_ms) >= APP_COMMAND_RX_IDLE_MS)))
-  {
-    ready = 1U;
-    length = g_command_rx_length;
-    memcpy(buffer, (const void *)g_command_rx_buffer, length);
-    g_command_rx_length = 0U;
-    g_command_rx_ready = 0U;
-    g_command_rx_overflow = 0U;
-  }
-  __enable_irq();
-
-  if (ready == 0U)
-  {
-    return;
-  }
-
-  parse_ok = App_CommandTryParse(buffer, length, &command_value);
-#if APP_DEBUG_CLI_ENABLE
-  App_DebugRecordCommandRx(buffer, length, parse_ok, command_value);
-#endif
-
-  if (parse_ok != 0U)
-  {
-    App_CommandQueue(command_value);
-  }
-}
-
-static void App_CommandRxByte(uint8_t rx)
-{
-  g_command_rx_updated_ms = HAL_GetTick();
-
-  if ((rx == '\r') || (rx == '\n') || (rx == 0U))
-  {
-    if (g_command_rx_length > 0U)
-    {
-      g_command_rx_ready = 1U;
-    }
-    return;
-  }
-
-  if (g_command_rx_ready != 0U)
-  {
-    return;
-  }
-
-  if (g_command_rx_length < APP_COMMAND_RX_BUFFER_SIZE)
-  {
-    g_command_rx_buffer[g_command_rx_length] = rx;
-    g_command_rx_length++;
-  }
-  else
-  {
-    g_command_rx_length = 0U;
-    g_command_rx_overflow = 1U;
-  }
-}
-
-static void App_CommandQueue(uint8_t command_value)
-{
-  __disable_irq();
-  g_command_pending_value = command_value;
-  g_command_pending = 1U;
-  __enable_irq();
-}
-
-static void App_CommandServiceTx(void)
-{
-  uint8_t command_value;
-
-  __disable_irq();
-  if (g_command_pending == 0U)
-  {
-    __enable_irq();
-    return;
-  }
-  command_value = g_command_pending_value;
-  g_command_pending = 0U;
-  __enable_irq();
-
-  if (App_SendModeCommand(command_value) != HAL_OK)
-  {
-    App_CommandQueue(command_value);
-  }
-}
-
-static void App_CommandRestartRx(void)
-{
-  (void)HAL_UART_Receive_IT(&huart2, (uint8_t *)&g_command_rx_byte, 1U);
-}
-
 static HAL_StatusTypeDef App_SendModeCommand(uint8_t command_value)
 {
   uint8_t tx_data[1];
-  HAL_StatusTypeDef status;
 
   if ((command_value < APP_MODE_CMD_STRAIGHT) || (command_value > APP_MODE_CMD_ENDURANCE))
   {
-#if APP_DEBUG_CLI_ENABLE
-    App_DebugRecordModeTx(command_value, HAL_ERROR, HAL_GetTick());
-#endif
     return HAL_ERROR;
   }
 
   tx_data[0] = command_value;
 
-  status = App_CanIo_SendCanBStd(APP_CAN2_MODE_COMMAND_ID, tx_data, 1U);
-#if APP_DEBUG_CLI_ENABLE
-  App_DebugRecordModeTx(command_value, status, HAL_GetTick());
-#endif
-  return status;
+  return App_CanIo_SendCanBStd(APP_CAN2_MODE_COMMAND_ID, tx_data, 1U);
 }
 
 static void App_ProcessCanRx(AppFdcanBus bus, const AppCanRxHeader *header, const uint8_t *data)
@@ -2922,7 +2799,7 @@ static HAL_StatusTypeDef App_RS485_Transmit(const uint8_t *data, uint16_t size)
   status = HAL_UART_Transmit(&huart2, (uint8_t *)data, size, APP_RS485_TX_TIMEOUT_MS);
   if (status != HAL_OK)
   {
-    App_CommandRestartRx();
+    (void)App_CommandIo_RestartRx();
     return status;
   }
 
@@ -2931,12 +2808,12 @@ static HAL_StatusTypeDef App_RS485_Transmit(const uint8_t *data, uint16_t size)
   {
     if ((uint32_t)(HAL_GetTick() - start_ms) > APP_RS485_TX_TIMEOUT_MS)
     {
-      App_CommandRestartRx();
+      (void)App_CommandIo_RestartRx();
       return HAL_TIMEOUT;
     }
   }
 
-  App_CommandRestartRx();
+  (void)App_CommandIo_RestartRx();
   g_last_rs485_tx_ms = HAL_GetTick();
   return HAL_OK;
 }
@@ -2974,8 +2851,7 @@ void HAL_UART_RxCpltCallback(UART_HandleTypeDef *huart)
 
   if (huart->Instance == USART2)
   {
-    App_CommandRxByte(g_command_rx_byte);
-    App_CommandRestartRx();
+    App_CommandIo_OnRxComplete();
   }
 }
 
@@ -2983,6 +2859,6 @@ void HAL_UART_ErrorCallback(UART_HandleTypeDef *huart)
 {
   if (huart->Instance == USART2)
   {
-    App_CommandRestartRx();
+    (void)App_CommandIo_RestartRx();
   }
 }
