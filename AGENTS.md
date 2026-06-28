@@ -34,7 +34,9 @@ Keep the bring-up path stable before porting higher-level telemetry parsing.
 
 - FDCAN callbacks must stay short: drain a bounded number of FIFO frames, update state, and return.
 - Do not do protobuf encoding, RS485 transmit, SPI register polling, or blocking waits from CAN or EXTI interrupt context.
-- `CANA`/`CANB`/`CANC` physical responsibilities are not finalized in code yet. Ask before mapping legacy `CAN2` protocol behavior to a specific 500 kbps bus.
+- `CANB`/`FDCAN2` is the confirmed successor of the old F405 500 kbps `CAN2` bus. Keep old `CAN2` parsing, mode-command transmit, and IMU-forward behavior on `FDCAN2`.
+- `CANA`/`FDCAN1` is initialized for bring-up but does not currently run old `CAN2` protocol parsing.
+- `CANC` physical responsibilities are not finalized in code yet. Ask before mapping existing protocol behavior to the external MCP2518FD bus.
 - `CANC` is an external MCP2518FD controller. Do not treat it as another STM32 FDCAN instance; it needs a separate driver and bring-up sequence.
 - RS485 direction is controlled by USART2 hardware DE on `PA1`. Do not reintroduce the F405 `RS485_DIR` GPIO timing model.
 - `PC8` LED is high-level on.
@@ -42,8 +44,9 @@ Keep the bring-up path stable before porting higher-level telemetry parsing.
 ## Protocol Migration Notes
 
 - The old telemetry target is still `fsae_TelemetryFrame` from nanopb unless a protocol change is explicitly requested.
-- The old F405 app uses bxCAN APIs and filter banks; none of that maps directly to G4 FDCAN.
-- The old `CAN1` 250 kbps parser should be migrated to `FDCAN3` only after its receive path is verified.
+- The old F405 app used bxCAN APIs and filter banks; G473 business code must use HAL FDCAN APIs.
+- The old `CAN1` 250 kbps parser maps to `FDCAN3`.
+- The old `CAN2` 500 kbps parser maps to `FDCAN2` / `CANB`.
 - Preserve old units and freshness semantics when moving parsing logic: `mv`, `deci_v`, `deci_c`, `ma`, 100 ms base telemetry, 500 ms module detail, and 2000 ms freshness windows.
 
 ## Build
