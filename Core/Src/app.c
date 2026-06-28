@@ -7,13 +7,11 @@
 #include <string.h>
 
 #include "app_command_parser.h"
+#include "app_can_io.h"
 #include "app_config.h"
 #include "app_utils.h"
-#include "fdcan.h"
 #include "gpio.h"
 #include "main.h"
-#include "mcp2518fd.h"
-#include "spi.h"
 #include "usart.h"
 
 #include "fsae_telemetry.pb.h"
@@ -111,8 +109,6 @@
 #define APP_DEBUG_DUMP_COUNT            8U
 #define APP_DEBUG_CLI_BUFFER_SIZE       32U
 #define APP_DEBUG_CAN_ID_COUNTER_COUNT  16U
-#define APP_CAN_RX_MAX_FRAMES_PER_IRQ   8U
-#define APP_MCP2518_RX_MAX_FRAMES_PER_POLL  8U
 #define APP_COMMAND_RX_BUFFER_SIZE      16U
 #define APP_COMMAND_RX_IDLE_MS          20U
 
@@ -125,14 +121,10 @@
 #define APP_IMU_ANGLE_SUBCMD_ROLL       0x01U
 #define APP_IMU_ANGLE_SUBCMD_PITCH      0x02U
 #define APP_IMU_ANGLE_SUBCMD_YAW        0x03U
-#define APP_IMU_FORWARD_QUEUE_DEPTH     16U
 
 /* PC8 LED0 is high-level on in the G473 board notes. */
 #define APP_LED_ON_STATE                GPIO_PIN_SET
 #define APP_LED_OFF_STATE               GPIO_PIN_RESET
-
-#define APP_CAN_ID_STD                  0U
-#define APP_CAN_ID_EXT                  1U
 
 #define APP_HALL_FAULT_BIT              (1UL << 18)
 #define APP_IMD_FAULT_BIT               (1UL << 19)
@@ -149,22 +141,6 @@ typedef enum
   APP_PROTOCOL_LEGACY,
   APP_PROTOCOL_MODERN
 } AppProtocol;
-
-typedef enum
-{
-  APP_FDCAN_BUS_CANA = 0,
-  APP_FDCAN_BUS_CANB,
-  APP_FDCAN_BUS_CAN1,
-  APP_FDCAN_BUS_CANC
-} AppFdcanBus;
-
-typedef struct
-{
-  uint32_t StdId;
-  uint32_t ExtId;
-  uint32_t IDE;
-  uint8_t DLC;
-} AppCanRxHeader;
 
 typedef struct
 {
@@ -350,11 +326,6 @@ static volatile uint8_t g_can_trace_write_index;
 static volatile uint8_t g_can_trace_count;
 static volatile AppCanIdCounter g_can_id_counters[APP_DEBUG_CAN_ID_COUNTER_COUNT];
 static volatile uint8_t g_can_id_counter_count;
-static volatile AppCan2TxFrame g_can2_tx_queue[APP_IMU_FORWARD_QUEUE_DEPTH];
-static volatile uint8_t g_can2_tx_head;
-static volatile uint8_t g_can2_tx_tail;
-static volatile uint8_t g_can2_tx_count;
-static volatile uint32_t g_can2_tx_drop_count;
 static volatile uint8_t g_cli_rx_byte;
 static volatile char g_cli_rx_buffer[APP_DEBUG_CLI_BUFFER_SIZE];
 static volatile uint8_t g_cli_rx_length;
@@ -368,7 +339,6 @@ static volatile uint8_t g_command_rx_overflow;
 static volatile uint32_t g_command_rx_updated_ms;
 static uint8_t g_command_pending_value;
 static uint8_t g_command_pending;
-static uint8_t g_canc_ready;
 #if APP_DEBUG_CLI_ENABLE
 static uint8_t g_debug_last_command_bytes[APP_COMMAND_RX_BUFFER_SIZE];
 static uint8_t g_debug_last_command_length;
@@ -415,16 +385,9 @@ static void App_CommandQueue(uint8_t command_value);
 static void App_CommandServiceTx(void);
 static void App_CommandRestartRx(void);
 static HAL_StatusTypeDef App_SendModeCommand(uint8_t command_value);
-static void App_Can2ServiceTxQueue(void);
-static uint8_t App_Can2QueueTx(uint32_t std_id, const uint8_t *data, uint8_t dlc);
-static void App_Mcp2518ServiceRx(void);
-static HAL_StatusTypeDef App_FDCAN_ConfigFilter(FDCAN_HandleTypeDef *hfdcan);
 static void App_ProcessCanRx(AppFdcanBus bus, const AppCanRxHeader *header, const uint8_t *data);
 static void App_ProcessCan1Rx(const AppCanRxHeader *header, const uint8_t *data);
 static void App_ProcessCan2Rx(const AppCanRxHeader *header, const uint8_t *data);
-static AppFdcanBus App_FdcanBusFromHandle(const FDCAN_HandleTypeDef *hfdcan);
-static void App_ConvertFdcanRxHeader(const FDCAN_RxHeaderTypeDef *src, AppCanRxHeader *dst);
-static void App_ConvertMcp2518RxHeader(const MCP2518FD_CanFrame *src, AppCanRxHeader *dst);
 static uint8_t App_ProcessCan1Ext(uint32_t ext_id, const uint8_t *data, uint8_t dlc);
 static uint8_t App_ProcessCan2Ext(uint32_t ext_id, const uint8_t *data, uint8_t dlc);
 static uint8_t App_ProcessCan2Std(uint32_t std_id, const uint8_t *data, uint8_t dlc);
@@ -494,10 +457,6 @@ void App_Init(void)
   g_can_trace_write_index = 0U;
   g_can_trace_count = 0U;
   g_can_id_counter_count = 0U;
-  g_can2_tx_head = 0U;
-  g_can2_tx_tail = 0U;
-  g_can2_tx_count = 0U;
-  g_can2_tx_drop_count = 0U;
   g_cli_rx_length = 0U;
   g_cli_command_ready = 0U;
   g_command_rx_length = 0U;
@@ -506,7 +465,6 @@ void App_Init(void)
   g_command_rx_updated_ms = 0U;
   g_command_pending_value = 0U;
   g_command_pending = 0U;
-  g_canc_ready = 0U;
 #if APP_DEBUG_CLI_ENABLE
   g_debug_last_command_length = 0U;
   g_debug_last_command_parse_ok = 0U;
@@ -522,54 +480,9 @@ void App_Init(void)
 
   App_SetStatusLed(0U);
 
-  if (App_FDCAN_ConfigFilter(&hfdcan1) != HAL_OK)
+  if (App_CanIo_Init(App_ProcessCanRx) != HAL_OK)
   {
     Error_Handler();
-  }
-
-  if (App_FDCAN_ConfigFilter(&hfdcan2) != HAL_OK)
-  {
-    Error_Handler();
-  }
-
-  if (App_FDCAN_ConfigFilter(&hfdcan3) != HAL_OK)
-  {
-    Error_Handler();
-  }
-
-  if (HAL_FDCAN_Start(&hfdcan1) != HAL_OK)
-  {
-    Error_Handler();
-  }
-
-  if (HAL_FDCAN_Start(&hfdcan2) != HAL_OK)
-  {
-    Error_Handler();
-  }
-
-  if (HAL_FDCAN_Start(&hfdcan3) != HAL_OK)
-  {
-    Error_Handler();
-  }
-
-  if (HAL_FDCAN_ActivateNotification(&hfdcan1, FDCAN_IT_RX_FIFO0_NEW_MESSAGE, 0U) != HAL_OK)
-  {
-    Error_Handler();
-  }
-
-  if (HAL_FDCAN_ActivateNotification(&hfdcan2, FDCAN_IT_RX_FIFO0_NEW_MESSAGE, 0U) != HAL_OK)
-  {
-    Error_Handler();
-  }
-
-  if (HAL_FDCAN_ActivateNotification(&hfdcan3, FDCAN_IT_RX_FIFO0_NEW_MESSAGE, 0U) != HAL_OK)
-  {
-    Error_Handler();
-  }
-
-  if (MCP2518FD_Init(&hspi1) == HAL_OK)
-  {
-    g_canc_ready = 1U;
   }
 
 #if APP_DEBUG_CLI_ENABLE
@@ -594,8 +507,7 @@ void App_Run(void)
   App_DebugPollCli();
   App_CommandPoll(now);
   App_CommandServiceTx();
-  App_Can2ServiceTxQueue();
-  App_Mcp2518ServiceRx();
+  App_CanIo_Service();
 
   if ((g_app_state.can1_seen == 0U) && (g_app_state.can2_seen == 0U))
   {
@@ -616,73 +528,6 @@ void App_Run(void)
       g_last_module_tx_ms = now;
     }
   }
-}
-
-void HAL_FDCAN_RxFifo0Callback(FDCAN_HandleTypeDef *hfdcan, uint32_t RxFifo0ITs)
-{
-  AppCanRxHeader header;
-  FDCAN_RxHeaderTypeDef fdcan_header;
-  uint8_t data[64];
-  uint8_t frames_processed = 0U;
-  AppFdcanBus bus = App_FdcanBusFromHandle(hfdcan);
-
-  if ((RxFifo0ITs & FDCAN_IT_RX_FIFO0_NEW_MESSAGE) == 0U)
-  {
-    return;
-  }
-
-  while ((HAL_FDCAN_GetRxFifoFillLevel(hfdcan, FDCAN_RX_FIFO0) > 0U) &&
-         (frames_processed < APP_CAN_RX_MAX_FRAMES_PER_IRQ))
-  {
-    if (HAL_FDCAN_GetRxMessage(hfdcan, FDCAN_RX_FIFO0, &fdcan_header, data) != HAL_OK)
-    {
-      return;
-    }
-
-    if ((fdcan_header.RxFrameType == FDCAN_DATA_FRAME) && (fdcan_header.FDFormat == FDCAN_CLASSIC_CAN))
-    {
-      App_ConvertFdcanRxHeader(&fdcan_header, &header);
-      App_ProcessCanRx(bus, &header, data);
-    }
-    frames_processed++;
-  }
-}
-
-void HAL_GPIO_EXTI_Callback(uint16_t GPIO_Pin)
-{
-  if (GPIO_Pin == MCP2518_INT_Pin)
-  {
-    MCP2518FD_OnInterrupt();
-  }
-}
-
-static AppFdcanBus App_FdcanBusFromHandle(const FDCAN_HandleTypeDef *hfdcan)
-{
-  if (hfdcan->Instance == FDCAN3)
-  {
-    return APP_FDCAN_BUS_CAN1;
-  }
-  if (hfdcan->Instance == FDCAN2)
-  {
-    return APP_FDCAN_BUS_CANB;
-  }
-  return APP_FDCAN_BUS_CANA;
-}
-
-static void App_ConvertFdcanRxHeader(const FDCAN_RxHeaderTypeDef *src, AppCanRxHeader *dst)
-{
-  dst->IDE = (src->IdType == FDCAN_EXTENDED_ID) ? APP_CAN_ID_EXT : APP_CAN_ID_STD;
-  dst->StdId = (src->IdType == FDCAN_STANDARD_ID) ? src->Identifier : 0U;
-  dst->ExtId = (src->IdType == FDCAN_EXTENDED_ID) ? src->Identifier : 0U;
-  dst->DLC = App_FdcanDlcToBytes(src->DataLength);
-}
-
-static void App_ConvertMcp2518RxHeader(const MCP2518FD_CanFrame *src, AppCanRxHeader *dst)
-{
-  dst->IDE = (src->id_type == MCP2518FD_ID_EXTENDED) ? APP_CAN_ID_EXT : APP_CAN_ID_STD;
-  dst->StdId = (src->id_type == MCP2518FD_ID_STANDARD) ? src->id : 0U;
-  dst->ExtId = (src->id_type == MCP2518FD_ID_EXTENDED) ? src->id : 0U;
-  dst->DLC = src->dlc;
 }
 
 static uint8_t App_IvtStateIsUsable(uint8_t state)
@@ -1285,7 +1130,6 @@ static void App_CommandRestartRx(void)
 
 static HAL_StatusTypeDef App_SendModeCommand(uint8_t command_value)
 {
-  FDCAN_TxHeaderTypeDef tx_header = {0};
   uint8_t tx_data[1];
   HAL_StatusTypeDef status;
 
@@ -1297,168 +1141,13 @@ static HAL_StatusTypeDef App_SendModeCommand(uint8_t command_value)
     return HAL_ERROR;
   }
 
-  if (HAL_FDCAN_GetTxFifoFreeLevel(&hfdcan2) == 0U)
-  {
-#if APP_DEBUG_CLI_ENABLE
-    App_DebugRecordModeTx(command_value, HAL_BUSY, HAL_GetTick());
-#endif
-    return HAL_BUSY;
-  }
-
-  tx_header.Identifier = APP_CAN2_MODE_COMMAND_ID;
-  tx_header.IdType = FDCAN_STANDARD_ID;
-  tx_header.TxFrameType = FDCAN_DATA_FRAME;
-  tx_header.DataLength = FDCAN_DLC_BYTES_1;
-  tx_header.ErrorStateIndicator = FDCAN_ESI_ACTIVE;
-  tx_header.BitRateSwitch = FDCAN_BRS_OFF;
-  tx_header.FDFormat = FDCAN_CLASSIC_CAN;
-  tx_header.TxEventFifoControl = FDCAN_NO_TX_EVENTS;
-  tx_header.MessageMarker = 0U;
   tx_data[0] = command_value;
 
-  status = HAL_FDCAN_AddMessageToTxFifoQ(&hfdcan2, &tx_header, tx_data);
+  status = App_CanIo_SendCanBStd(APP_CAN2_MODE_COMMAND_ID, tx_data, 1U);
 #if APP_DEBUG_CLI_ENABLE
   App_DebugRecordModeTx(command_value, status, HAL_GetTick());
 #endif
   return status;
-}
-
-static void App_Can2ServiceTxQueue(void)
-{
-  AppCan2TxFrame frame;
-  FDCAN_TxHeaderTypeDef tx_header = {0};
-  uint8_t i;
-
-  while (HAL_FDCAN_GetTxFifoFreeLevel(&hfdcan2) > 0U)
-  {
-    __disable_irq();
-    if (g_can2_tx_count == 0U)
-    {
-      __enable_irq();
-      return;
-    }
-
-    frame.std_id = g_can2_tx_queue[g_can2_tx_tail].std_id;
-    frame.dlc = g_can2_tx_queue[g_can2_tx_tail].dlc;
-    for (i = 0U; i < frame.dlc; ++i)
-    {
-      frame.data[i] = g_can2_tx_queue[g_can2_tx_tail].data[i];
-    }
-    __enable_irq();
-
-    tx_header.Identifier = frame.std_id;
-    tx_header.IdType = FDCAN_STANDARD_ID;
-    tx_header.TxFrameType = FDCAN_DATA_FRAME;
-    tx_header.DataLength = App_FdcanDlcFromBytes(frame.dlc);
-    tx_header.ErrorStateIndicator = FDCAN_ESI_ACTIVE;
-    tx_header.BitRateSwitch = FDCAN_BRS_OFF;
-    tx_header.FDFormat = FDCAN_CLASSIC_CAN;
-    tx_header.TxEventFifoControl = FDCAN_NO_TX_EVENTS;
-    tx_header.MessageMarker = 0U;
-
-    if (HAL_FDCAN_AddMessageToTxFifoQ(&hfdcan2, &tx_header, frame.data) != HAL_OK)
-    {
-      return;
-    }
-
-    __disable_irq();
-    if (g_can2_tx_count > 0U)
-    {
-      g_can2_tx_tail = (uint8_t)((g_can2_tx_tail + 1U) % APP_IMU_FORWARD_QUEUE_DEPTH);
-      g_can2_tx_count--;
-    }
-    __enable_irq();
-  }
-}
-
-static uint8_t App_Can2QueueTx(uint32_t std_id, const uint8_t *data, uint8_t dlc)
-{
-  uint8_t i;
-
-  if ((dlc == 0U) || (dlc > 8U))
-  {
-    return 0U;
-  }
-
-  __disable_irq();
-  if (g_can2_tx_count >= APP_IMU_FORWARD_QUEUE_DEPTH)
-  {
-    g_can2_tx_drop_count++;
-    __enable_irq();
-    return 0U;
-  }
-
-  g_can2_tx_queue[g_can2_tx_head].std_id = std_id;
-  g_can2_tx_queue[g_can2_tx_head].dlc = dlc;
-  for (i = 0U; i < dlc; ++i)
-  {
-    g_can2_tx_queue[g_can2_tx_head].data[i] = data[i];
-  }
-  g_can2_tx_head = (uint8_t)((g_can2_tx_head + 1U) % APP_IMU_FORWARD_QUEUE_DEPTH);
-  g_can2_tx_count++;
-  __enable_irq();
-
-  return 1U;
-}
-
-static void App_Mcp2518ServiceRx(void)
-{
-  MCP2518FD_CanFrame frame;
-  AppCanRxHeader header;
-  uint8_t received;
-  uint8_t frames_processed = 0U;
-
-  if ((g_canc_ready == 0U) || (MCP2518FD_IsReady() == 0U))
-  {
-    return;
-  }
-
-  while (frames_processed < APP_MCP2518_RX_MAX_FRAMES_PER_POLL)
-  {
-    if (MCP2518FD_Receive(&frame, &received) != HAL_OK)
-    {
-      return;
-    }
-    if (received == 0U)
-    {
-      return;
-    }
-
-    App_ConvertMcp2518RxHeader(&frame, &header);
-    App_ProcessCanRx(APP_FDCAN_BUS_CANC, &header, frame.data);
-    frames_processed++;
-  }
-}
-
-static HAL_StatusTypeDef App_FDCAN_ConfigFilter(FDCAN_HandleTypeDef *hfdcan)
-{
-  FDCAN_FilterTypeDef filter = {0};
-
-  filter.IdType = FDCAN_STANDARD_ID;
-  filter.FilterIndex = 0U;
-  filter.FilterType = FDCAN_FILTER_MASK;
-  filter.FilterConfig = FDCAN_FILTER_TO_RXFIFO0;
-  filter.FilterID1 = 0x000U;
-  filter.FilterID2 = 0x000U;
-  if (HAL_FDCAN_ConfigFilter(hfdcan, &filter) != HAL_OK)
-  {
-    return HAL_ERROR;
-  }
-
-  filter.IdType = FDCAN_EXTENDED_ID;
-  filter.FilterIndex = 0U;
-  filter.FilterID1 = 0x00000000UL;
-  filter.FilterID2 = 0x00000000UL;
-  if (HAL_FDCAN_ConfigFilter(hfdcan, &filter) != HAL_OK)
-  {
-    return HAL_ERROR;
-  }
-
-  return HAL_FDCAN_ConfigGlobalFilter(hfdcan,
-                                      FDCAN_ACCEPT_IN_RX_FIFO0,
-                                      FDCAN_ACCEPT_IN_RX_FIFO0,
-                                      FDCAN_REJECT_REMOTE,
-                                      FDCAN_REJECT_REMOTE);
 }
 
 static void App_ProcessCanRx(AppFdcanBus bus, const AppCanRxHeader *header, const uint8_t *data)
@@ -1691,7 +1380,7 @@ static uint8_t App_ProcessImuRaw(const uint8_t *data, uint8_t dlc, uint32_t now)
     return 0U;
   }
 
-  queued = App_Can2QueueTx(forward_frame.std_id, forward_frame.data, forward_frame.dlc);
+  queued = App_CanIo_QueueCanBStd(forward_frame.std_id, forward_frame.data, forward_frame.dlc);
 
   switch (forward_frame.std_id)
   {
