@@ -45,6 +45,8 @@ target_link_directories(${CMAKE_PROJECT_NAME} PRIVATE
 # Add sources to executable
 target_sources(${CMAKE_PROJECT_NAME} PRIVATE
     Core/Src/app.c
+    Core/Src/app_telemetry.c
+    Core/Src/app_fault.c
     Core/Src/app_can_decode.c
     Core/Src/app_can_io.c
     Core/Src/app_command_io.c
