@@ -1,0 +1,499 @@
+VERSION "IVT-S Datasheet V1.03 Intel-configured results"
+
+NS_ :
+	NS_DESC_
+	CM_
+	BA_DEF_
+	BA_
+	VAL_
+	CAT_DEF_
+	CAT_
+	FILTER
+	BA_DEF_DEF_
+	EV_DATA_
+	ENVVAR_DATA_
+	SGTYPE_
+	SGTYPE_VAL_
+	BA_DEF_SGTYPE_
+	BA_SGTYPE_
+	SIG_TYPE_REF_
+	VAL_TABLE_
+	SIG_GROUP_
+	SIG_VALTYPE_
+	SIGTYPE_VALTYPE_
+	BO_TX_BU_
+	BA_DEF_REL_
+	BA_REL_
+	BA_DEF_DEF_REL_
+	BU_SG_REL_
+	BU_EV_REL_
+	BU_BO_REL_
+	SG_MUL_VAL_
+
+BS_:
+
+BU_: VCU IVT_S
+
+
+BO_ 1041 IVT_Msg_Command: 8 VCU
+ SG_ Command_Mux M : 7|8@0+ (1,0) [0|255] "" IVT_S
+
+ SG_ Cmd_SetCanId_IdHigh_m16 m16 : 15|8@0+ (1,0) [0|7] "" IVT_S
+ SG_ Cmd_SetCanId_IdLow_m16 m16 : 23|8@0+ (1,0) [0|255] "" IVT_S
+ SG_ Cmd_SetCanId_Serial_m16 m16 : 31|32@0+ (1,0) [0|4294967295] "" IVT_S
+
+ SG_ Cmd_SetCanId_IdHigh_m17 m17 : 15|8@0+ (1,0) [0|7] "" IVT_S
+ SG_ Cmd_SetCanId_IdLow_m17 m17 : 23|8@0+ (1,0) [0|255] "" IVT_S
+ SG_ Cmd_SetCanId_Serial_m17 m17 : 31|32@0+ (1,0) [0|4294967295] "" IVT_S
+
+ SG_ Cmd_SetCanId_IdHigh_m18 m18 : 15|8@0+ (1,0) [0|7] "" IVT_S
+ SG_ Cmd_SetCanId_IdLow_m18 m18 : 23|8@0+ (1,0) [0|255] "" IVT_S
+ SG_ Cmd_SetCanId_Serial_m18 m18 : 31|32@0+ (1,0) [0|4294967295] "" IVT_S
+
+ SG_ Cmd_SetCanId_IdHigh_m19 m19 : 15|8@0+ (1,0) [0|7] "" IVT_S
+ SG_ Cmd_SetCanId_IdLow_m19 m19 : 23|8@0+ (1,0) [0|255] "" IVT_S
+ SG_ Cmd_SetCanId_Serial_m19 m19 : 31|32@0+ (1,0) [0|4294967295] "" IVT_S
+
+ SG_ Cmd_SetCanId_IdHigh_m20 m20 : 15|8@0+ (1,0) [0|7] "" IVT_S
+ SG_ Cmd_SetCanId_IdLow_m20 m20 : 23|8@0+ (1,0) [0|255] "" IVT_S
+ SG_ Cmd_SetCanId_Serial_m20 m20 : 31|32@0+ (1,0) [0|4294967295] "" IVT_S
+
+ SG_ Cmd_SetCanId_IdHigh_m21 m21 : 15|8@0+ (1,0) [0|7] "" IVT_S
+ SG_ Cmd_SetCanId_IdLow_m21 m21 : 23|8@0+ (1,0) [0|255] "" IVT_S
+ SG_ Cmd_SetCanId_Serial_m21 m21 : 31|32@0+ (1,0) [0|4294967295] "" IVT_S
+
+ SG_ Cmd_SetCanId_IdHigh_m22 m22 : 15|8@0+ (1,0) [0|7] "" IVT_S
+ SG_ Cmd_SetCanId_IdLow_m22 m22 : 23|8@0+ (1,0) [0|255] "" IVT_S
+ SG_ Cmd_SetCanId_Serial_m22 m22 : 31|32@0+ (1,0) [0|4294967295] "" IVT_S
+
+ SG_ Cmd_SetCanId_IdHigh_m23 m23 : 15|8@0+ (1,0) [0|7] "" IVT_S
+ SG_ Cmd_SetCanId_IdLow_m23 m23 : 23|8@0+ (1,0) [0|255] "" IVT_S
+ SG_ Cmd_SetCanId_Serial_m23 m23 : 31|32@0+ (1,0) [0|4294967295] "" IVT_S
+
+ SG_ Cmd_SetCanId_IdHigh_m29 m29 : 15|8@0+ (1,0) [0|7] "" IVT_S
+ SG_ Cmd_SetCanId_IdLow_m29 m29 : 23|8@0+ (1,0) [0|255] "" IVT_S
+ SG_ Cmd_SetCanId_Serial_m29 m29 : 31|32@0+ (1,0) [0|4294967295] "" IVT_S
+
+ SG_ Cmd_SetCanId_IdHigh_m31 m31 : 15|8@0+ (1,0) [0|7] "" IVT_S
+ SG_ Cmd_SetCanId_IdLow_m31 m31 : 23|8@0+ (1,0) [0|255] "" IVT_S
+ SG_ Cmd_SetCanId_Serial_m31 m31 : 31|32@0+ (1,0) [0|4294967295] "" IVT_S
+
+ SG_ Cmd_SetConfig_Mode_m32 m32 : 11|4@0+ (1,0) [0|2] "" IVT_S
+ SG_ Cmd_SetConfig_Flags_m32 m32 : 15|4@0+ (1,0) [0|15] "" IVT_S
+ SG_ Cmd_SetConfig_Time_m32 m32 : 23|16@0+ (1,0) [0|65535] "ms" IVT_S
+
+ SG_ Cmd_SetConfig_Mode_m33 m33 : 11|4@0+ (1,0) [0|2] "" IVT_S
+ SG_ Cmd_SetConfig_Flags_m33 m33 : 15|4@0+ (1,0) [0|15] "" IVT_S
+ SG_ Cmd_SetConfig_Time_m33 m33 : 23|16@0+ (1,0) [0|65535] "ms" IVT_S
+
+ SG_ Cmd_SetConfig_Mode_m34 m34 : 11|4@0+ (1,0) [0|2] "" IVT_S
+ SG_ Cmd_SetConfig_Flags_m34 m34 : 15|4@0+ (1,0) [0|15] "" IVT_S
+ SG_ Cmd_SetConfig_Time_m34 m34 : 23|16@0+ (1,0) [0|65535] "ms" IVT_S
+
+ SG_ Cmd_SetConfig_Mode_m35 m35 : 11|4@0+ (1,0) [0|2] "" IVT_S
+ SG_ Cmd_SetConfig_Flags_m35 m35 : 15|4@0+ (1,0) [0|15] "" IVT_S
+ SG_ Cmd_SetConfig_Time_m35 m35 : 23|16@0+ (1,0) [0|65535] "ms" IVT_S
+
+ SG_ Cmd_SetConfig_Mode_m36 m36 : 11|4@0+ (1,0) [0|2] "" IVT_S
+ SG_ Cmd_SetConfig_Flags_m36 m36 : 15|4@0+ (1,0) [0|15] "" IVT_S
+ SG_ Cmd_SetConfig_Time_m36 m36 : 23|16@0+ (1,0) [0|65535] "ms" IVT_S
+
+ SG_ Cmd_SetConfig_Mode_m37 m37 : 11|4@0+ (1,0) [0|2] "" IVT_S
+ SG_ Cmd_SetConfig_Flags_m37 m37 : 15|4@0+ (1,0) [0|15] "" IVT_S
+ SG_ Cmd_SetConfig_Time_m37 m37 : 23|16@0+ (1,0) [0|65535] "ms" IVT_S
+
+ SG_ Cmd_SetConfig_Mode_m38 m38 : 11|4@0+ (1,0) [0|2] "" IVT_S
+ SG_ Cmd_SetConfig_Flags_m38 m38 : 15|4@0+ (1,0) [0|15] "" IVT_S
+ SG_ Cmd_SetConfig_Time_m38 m38 : 23|16@0+ (1,0) [0|65535] "ms" IVT_S
+
+ SG_ Cmd_SetConfig_Mode_m39 m39 : 11|4@0+ (1,0) [0|2] "" IVT_S
+ SG_ Cmd_SetConfig_Flags_m39 m39 : 15|4@0+ (1,0) [0|15] "" IVT_S
+ SG_ Cmd_SetConfig_Time_m39 m39 : 23|16@0+ (1,0) [0|65535] "ms" IVT_S
+
+ SG_ Cmd_Reset_Type m48 : 15|8@0+ (1,0) [0|2] "" IVT_S
+ SG_ Cmd_Reset_Item m48 : 23|8@0+ (1,0) [0|255] "" IVT_S
+ SG_ Cmd_Reset_Serial m48 : 31|32@0+ (1,0) [0|4294967295] "" IVT_S
+
+ SG_ Cmd_Trigger_Mask m49 : 15|16@0+ (1,0) [0|65535] "" IVT_S
+
+ SG_ Cmd_StartOcTest_Time m51 : 15|16@0+ (1,0) [0|65535] "ms" IVT_S
+
+ SG_ Cmd_SetMode_Actual m52 : 15|8@0+ (1,0) [0|1] "" IVT_S
+ SG_ Cmd_SetMode_Startup m52 : 23|8@0+ (1,0) [0|1] "" IVT_S
+ SG_ Cmd_SetMode_AccessCode m52 : 31|16@0+ (1,0) [0|65535] "" IVT_S
+
+ SG_ Cmd_SetThresholdPos_Set m53 : 15|16@0+ (1,0) [0|65535] "A" IVT_S
+ SG_ Cmd_SetThresholdPos_Reset m53 : 31|16@0+ (1,0) [0|65535] "A" IVT_S
+
+ SG_ Cmd_SetThresholdNeg_Set m54 : 15|16@0+ (1,0) [0|65535] "A" IVT_S
+ SG_ Cmd_SetThresholdNeg_Reset m54 : 31|16@0+ (1,0) [0|65535] "A" IVT_S
+
+ SG_ Cmd_RestartToBitrate_Code m58 : 15|8@0+ (1,0) [0|255] "" IVT_S
+
+ SG_ Cmd_GetMeasErr_Type m64 : 15|8@0+ (1,0) [0|255] "" IVT_S
+ SG_ Cmd_GetSysErr_Type m65 : 15|8@0+ (1,0) [0|255] "" IVT_S
+ SG_ Cmd_GetOverallLog_Item m66 : 15|8@0+ (1,0) [0|255] "" IVT_S
+ SG_ Cmd_GetResetLog_Item m67 : 15|8@0+ (1,0) [0|255] "" IVT_S
+
+ SG_ Cmd_GetCanId_Serial_m80 m80 : 31|32@0+ (1,0) [0|4294967295] "" IVT_S
+ SG_ Cmd_GetCanId_Serial_m81 m81 : 31|32@0+ (1,0) [0|4294967295] "" IVT_S
+ SG_ Cmd_GetCanId_Serial_m82 m82 : 31|32@0+ (1,0) [0|4294967295] "" IVT_S
+ SG_ Cmd_GetCanId_Serial_m83 m83 : 31|32@0+ (1,0) [0|4294967295] "" IVT_S
+ SG_ Cmd_GetCanId_Serial_m84 m84 : 31|32@0+ (1,0) [0|4294967295] "" IVT_S
+ SG_ Cmd_GetCanId_Serial_m85 m85 : 31|32@0+ (1,0) [0|4294967295] "" IVT_S
+ SG_ Cmd_GetCanId_Serial_m86 m86 : 31|32@0+ (1,0) [0|4294967295] "" IVT_S
+ SG_ Cmd_GetCanId_Serial_m87 m87 : 31|32@0+ (1,0) [0|4294967295] "" IVT_S
+ SG_ Cmd_GetCanId_Serial_m93 m93 : 31|32@0+ (1,0) [0|4294967295] "" IVT_S
+ SG_ Cmd_GetCanId_Serial_m95 m95 : 31|32@0+ (1,0) [0|4294967295] "" IVT_S
+
+
+BO_ 1297 IVT_Msg_Response: 8 IVT_S
+ SG_ Response_Mux M : 7|8@0+ (1,0) [0|255] "" VCU
+
+ SG_ Rsp_Detail_Type_m128 m128 : 15|8@0+ (1,0) [0|255] "" VCU
+ SG_ Rsp_MeasErr_DataByte2_m128 m128 : 23|8@0+ (1,0) [0|255] "" VCU
+ SG_ Rsp_MeasErr_DataByte3_m128 m128 : 31|8@0+ (1,0) [0|255] "" VCU
+
+ SG_ Rsp_Detail_Type_m129 m129 : 15|8@0+ (1,0) [0|255] "" VCU
+ SG_ Rsp_SysErr_DataByte2_m129 m129 : 23|8@0+ (1,0) [0|255] "" VCU
+ SG_ Rsp_SysErr_DataByte3_m129 m129 : 31|8@0+ (1,0) [0|255] "" VCU
+
+ SG_ Rsp_LogOverall_Item m130 : 15|8@0+ (1,0) [0|255] "" VCU
+ SG_ Rsp_LogOverall_Data m130 : 23|48@0+ (1,0) [0|281474976710655] "" VCU
+
+ SG_ Rsp_LogReset_Item m131 : 15|8@0+ (1,0) [0|255] "" VCU
+ SG_ Rsp_LogReset_Data m131 : 23|48@0+ (1,0) [0|281474976710655] "" VCU
+
+ SG_ Rsp_CanId_IdHigh_m144 m144 : 15|8@0+ (1,0) [0|7] "" VCU
+ SG_ Rsp_CanId_IdLow_m144 m144 : 23|8@0+ (1,0) [0|255] "" VCU
+ SG_ Rsp_CanId_Serial_m144 m144 : 31|32@0+ (1,0) [0|4294967295] "" VCU
+
+ SG_ Rsp_CanId_IdHigh_m145 m145 : 15|8@0+ (1,0) [0|7] "" VCU
+ SG_ Rsp_CanId_IdLow_m145 m145 : 23|8@0+ (1,0) [0|255] "" VCU
+ SG_ Rsp_CanId_Serial_m145 m145 : 31|32@0+ (1,0) [0|4294967295] "" VCU
+
+ SG_ Rsp_CanId_IdHigh_m146 m146 : 15|8@0+ (1,0) [0|7] "" VCU
+ SG_ Rsp_CanId_IdLow_m146 m146 : 23|8@0+ (1,0) [0|255] "" VCU
+ SG_ Rsp_CanId_Serial_m146 m146 : 31|32@0+ (1,0) [0|4294967295] "" VCU
+
+ SG_ Rsp_CanId_IdHigh_m147 m147 : 15|8@0+ (1,0) [0|7] "" VCU
+ SG_ Rsp_CanId_IdLow_m147 m147 : 23|8@0+ (1,0) [0|255] "" VCU
+ SG_ Rsp_CanId_Serial_m147 m147 : 31|32@0+ (1,0) [0|4294967295] "" VCU
+
+ SG_ Rsp_CanId_IdHigh_m148 m148 : 15|8@0+ (1,0) [0|7] "" VCU
+ SG_ Rsp_CanId_IdLow_m148 m148 : 23|8@0+ (1,0) [0|255] "" VCU
+ SG_ Rsp_CanId_Serial_m148 m148 : 31|32@0+ (1,0) [0|4294967295] "" VCU
+
+ SG_ Rsp_CanId_IdHigh_m149 m149 : 15|8@0+ (1,0) [0|7] "" VCU
+ SG_ Rsp_CanId_IdLow_m149 m149 : 23|8@0+ (1,0) [0|255] "" VCU
+ SG_ Rsp_CanId_Serial_m149 m149 : 31|32@0+ (1,0) [0|4294967295] "" VCU
+
+ SG_ Rsp_CanId_IdHigh_m150 m150 : 15|8@0+ (1,0) [0|7] "" VCU
+ SG_ Rsp_CanId_IdLow_m150 m150 : 23|8@0+ (1,0) [0|255] "" VCU
+ SG_ Rsp_CanId_Serial_m150 m150 : 31|32@0+ (1,0) [0|4294967295] "" VCU
+
+ SG_ Rsp_CanId_IdHigh_m151 m151 : 15|8@0+ (1,0) [0|7] "" VCU
+ SG_ Rsp_CanId_IdLow_m151 m151 : 23|8@0+ (1,0) [0|255] "" VCU
+ SG_ Rsp_CanId_Serial_m151 m151 : 31|32@0+ (1,0) [0|4294967295] "" VCU
+
+ SG_ Rsp_CanId_IdHigh_m157 m157 : 15|8@0+ (1,0) [0|7] "" VCU
+ SG_ Rsp_CanId_IdLow_m157 m157 : 23|8@0+ (1,0) [0|255] "" VCU
+ SG_ Rsp_CanId_Serial_m157 m157 : 31|32@0+ (1,0) [0|4294967295] "" VCU
+
+ SG_ Rsp_CanId_IdHigh_m159 m159 : 15|8@0+ (1,0) [0|7] "" VCU
+ SG_ Rsp_CanId_IdLow_m159 m159 : 23|8@0+ (1,0) [0|255] "" VCU
+ SG_ Rsp_CanId_Serial_m159 m159 : 31|32@0+ (1,0) [0|4294967295] "" VCU
+
+ SG_ Rsp_Config_Mode_m160 m160 : 11|4@0+ (1,0) [0|2] "" VCU
+ SG_ Rsp_Config_Flags_m160 m160 : 15|4@0+ (1,0) [0|15] "" VCU
+ SG_ Rsp_Config_Time_m160 m160 : 23|16@0+ (1,0) [0|65535] "ms" VCU
+
+ SG_ Rsp_Config_Mode_m161 m161 : 11|4@0+ (1,0) [0|2] "" VCU
+ SG_ Rsp_Config_Flags_m161 m161 : 15|4@0+ (1,0) [0|15] "" VCU
+ SG_ Rsp_Config_Time_m161 m161 : 23|16@0+ (1,0) [0|65535] "ms" VCU
+
+ SG_ Rsp_Config_Mode_m162 m162 : 11|4@0+ (1,0) [0|2] "" VCU
+ SG_ Rsp_Config_Flags_m162 m162 : 15|4@0+ (1,0) [0|15] "" VCU
+ SG_ Rsp_Config_Time_m162 m162 : 23|16@0+ (1,0) [0|65535] "ms" VCU
+
+ SG_ Rsp_Config_Mode_m163 m163 : 11|4@0+ (1,0) [0|2] "" VCU
+ SG_ Rsp_Config_Flags_m163 m163 : 15|4@0+ (1,0) [0|15] "" VCU
+ SG_ Rsp_Config_Time_m163 m163 : 23|16@0+ (1,0) [0|65535] "ms" VCU
+
+ SG_ Rsp_Config_Mode_m164 m164 : 11|4@0+ (1,0) [0|2] "" VCU
+ SG_ Rsp_Config_Flags_m164 m164 : 15|4@0+ (1,0) [0|15] "" VCU
+ SG_ Rsp_Config_Time_m164 m164 : 23|16@0+ (1,0) [0|65535] "ms" VCU
+
+ SG_ Rsp_Config_Mode_m165 m165 : 11|4@0+ (1,0) [0|2] "" VCU
+ SG_ Rsp_Config_Flags_m165 m165 : 15|4@0+ (1,0) [0|15] "" VCU
+ SG_ Rsp_Config_Time_m165 m165 : 23|16@0+ (1,0) [0|65535] "ms" VCU
+
+ SG_ Rsp_Config_Mode_m166 m166 : 11|4@0+ (1,0) [0|2] "" VCU
+ SG_ Rsp_Config_Flags_m166 m166 : 15|4@0+ (1,0) [0|15] "" VCU
+ SG_ Rsp_Config_Time_m166 m166 : 23|16@0+ (1,0) [0|65535] "ms" VCU
+
+ SG_ Rsp_Config_Mode_m167 m167 : 11|4@0+ (1,0) [0|2] "" VCU
+ SG_ Rsp_Config_Flags_m167 m167 : 15|4@0+ (1,0) [0|15] "" VCU
+ SG_ Rsp_Config_Time_m167 m167 : 23|16@0+ (1,0) [0|65535] "ms" VCU
+
+ SG_ Rsp_Reset_Type m176 : 15|8@0+ (1,0) [0|255] "" VCU
+ SG_ Rsp_Reset_Item m176 : 23|8@0+ (1,0) [0|255] "" VCU
+ SG_ Rsp_Reset_Serial m176 : 31|32@0+ (1,0) [0|4294967295] "" VCU
+
+ SG_ Rsp_Trigger_Mask m177 : 15|16@0+ (1,0) [0|65535] "" VCU
+
+ SG_ Rsp_Store_Status m178 : 15|8@0+ (1,0) [0|255] "" VCU
+ SG_ Rsp_Store_Serial m178 : 23|32@0+ (1,0) [0|4294967295] "" VCU
+
+ SG_ Rsp_OcTest_Remaining m179 : 15|16@0+ (1,0) [0|65535] "ms" VCU
+
+ SG_ Rsp_Mode_Actual m180 : 15|8@0+ (1,0) [0|1] "" VCU
+ SG_ Rsp_Mode_Startup m180 : 23|8@0+ (1,0) [0|1] "" VCU
+ SG_ Rsp_Mode_AccessCode m180 : 31|16@0+ (1,0) [0|65535] "" VCU
+
+ SG_ Rsp_ThresholdPos_Set m181 : 15|16@0+ (1,0) [0|65535] "A" VCU
+ SG_ Rsp_ThresholdPos_Reset m181 : 31|16@0+ (1,0) [0|65535] "A" VCU
+
+ SG_ Rsp_ThresholdNeg_Set m182 : 15|16@0+ (1,0) [0|65535] "A" VCU
+ SG_ Rsp_ThresholdNeg_Reset m182 : 31|16@0+ (1,0) [0|65535] "A" VCU
+
+ SG_ Rsp_Device_Type m185 : 15|8@0+ (1,0) [0|255] "" VCU
+ SG_ Rsp_Device_INomDiv16 m185 : 23|8@0+ (1,0) [0|255] "" VCU
+ SG_ Rsp_Device_VoltageChannels m185 : 27|4@0+ (1,0) [0|15] "" VCU
+ SG_ Rsp_Device_INomMod16 m185 : 31|4@0+ (1,0) [0|15] "" VCU
+ SG_ Rsp_Device_Feature m185 : 39|8@0+ (1,0) [0|255] "" VCU
+ SG_ Rsp_Device_CommType m185 : 47|8@0+ (1,0) [0|255] "" VCU
+ SG_ Rsp_Device_SupplyType m185 : 55|8@0+ (1,0) [0|255] "" VCU
+
+ SG_ Rsp_SwVersion_Major m186 : 15|8@0+ (1,0) [0|255] "" VCU
+ SG_ Rsp_SwVersion_Minor m186 : 23|8@0+ (1,0) [0|255] "" VCU
+ SG_ Rsp_SwVersion_Rev m186 : 31|8@0+ (1,0) [0|255] "" VCU
+ SG_ Rsp_SwVersion_Year m186 : 39|8@0+ (1,0) [0|255] "" VCU
+ SG_ Rsp_SwVersion_Month m186 : 47|8@0+ (1,0) [0|255] "" VCU
+ SG_ Rsp_SwVersion_Day m186 : 55|8@0+ (1,0) [0|255] "" VCU
+
+ SG_ Rsp_SerialNumber m187 : 15|32@0+ (1,0) [0|4294967295] "" VCU
+
+ SG_ Rsp_ArticleNumber m188 : 15|56@0+ (1,0) [0|72057594037927935] "" VCU
+
+ SG_ Rsp_Alive_CommandIdHigh m191 : 15|8@0+ (1,0) [0|7] "" VCU
+ SG_ Rsp_Alive_CommandIdLow m191 : 23|8@0+ (1,0) [0|255] "" VCU
+ SG_ Rsp_Alive_Serial m191 : 31|32@0+ (1,0) [0|4294967295] "" VCU
+
+ SG_ Rsp_InvalidMux m255 : 15|8@0+ (1,0) [0|255] "" VCU
+
+
+BO_ 1313 IVT_Msg_Result_I: 6 IVT_S
+ SG_ MuxID : 0|8@1+ (1,0) [0|0] "" VCU
+ SG_ IVT_MsgCount : 8|4@1+ (1,0) [0|15] "" VCU
+ SG_ IVT_Result_state : 12|4@1+ (1,0) [0|15] "" VCU
+ SG_ IVT_Result_I : 16|32@1- (0.001,0) [-2147483.648|2147483.647] "A" VCU
+
+BO_ 1314 IVT_Msg_Result_U1: 6 IVT_S
+ SG_ MuxID : 0|8@1+ (1,0) [1|1] "" VCU
+ SG_ IVT_MsgCount : 8|4@1+ (1,0) [0|15] "" VCU
+ SG_ IVT_Result_state : 12|4@1+ (1,0) [0|15] "" VCU
+ SG_ IVT_Result_U1 : 16|32@1- (0.001,0) [-2147483.648|2147483.647] "V" VCU
+
+BO_ 1315 IVT_Msg_Result_U2: 6 IVT_S
+ SG_ MuxID : 0|8@1+ (1,0) [2|2] "" VCU
+ SG_ IVT_MsgCount : 8|4@1+ (1,0) [0|15] "" VCU
+ SG_ IVT_Result_state : 12|4@1+ (1,0) [0|15] "" VCU
+ SG_ IVT_Result_U2 : 16|32@1- (0.001,0) [-2147483.648|2147483.647] "V" VCU
+
+BO_ 1316 IVT_Msg_Result_U3: 6 IVT_S
+ SG_ MuxID : 0|8@1+ (1,0) [3|3] "" VCU
+ SG_ IVT_MsgCount : 8|4@1+ (1,0) [0|15] "" VCU
+ SG_ IVT_Result_state : 12|4@1+ (1,0) [0|15] "" VCU
+ SG_ IVT_Result_U3 : 16|32@1- (0.001,0) [-2147483.648|2147483.647] "V" VCU
+
+BO_ 1317 IVT_Msg_Result_T: 6 IVT_S
+ SG_ MuxID : 0|8@1+ (1,0) [4|4] "" VCU
+ SG_ IVT_MsgCount : 8|4@1+ (1,0) [0|15] "" VCU
+ SG_ IVT_Result_state : 12|4@1+ (1,0) [0|15] "" VCU
+ SG_ IVT_Result_T : 16|32@1- (0.1,0) [-214748364.8|214748364.7] "degC" VCU
+
+BO_ 1318 IVT_Msg_Result_W: 6 IVT_S
+ SG_ MuxID : 0|8@1+ (1,0) [5|5] "" VCU
+ SG_ IVT_MsgCount : 8|4@1+ (1,0) [0|15] "" VCU
+ SG_ IVT_Result_state : 12|4@1+ (1,0) [0|15] "" VCU
+ SG_ IVT_Result_W : 16|32@1- (1,0) [-2147483648|2147483647] "W" VCU
+
+BO_ 1319 IVT_Msg_Result_As: 6 IVT_S
+ SG_ MuxID : 0|8@1+ (1,0) [6|6] "" VCU
+ SG_ IVT_MsgCount : 8|4@1+ (1,0) [0|15] "" VCU
+ SG_ IVT_Result_state : 12|4@1+ (1,0) [0|15] "" VCU
+ SG_ IVT_Result_As : 16|32@1- (1,0) [-2147483648|2147483647] "As" VCU
+
+BO_ 1320 IVT_Msg_Result_Wh: 6 IVT_S
+ SG_ MuxID : 0|8@1+ (1,0) [7|7] "" VCU
+ SG_ IVT_MsgCount : 8|4@1+ (1,0) [0|15] "" VCU
+ SG_ IVT_Result_state : 12|4@1+ (1,0) [0|15] "" VCU
+ SG_ IVT_Result_Wh : 16|32@1- (1,0) [-2147483648|2147483647] "Wh" VCU
+
+
+CM_ BO_ 1041 "Function commands, SET and GET commands. Default CAN ID 0x411.";
+CM_ BO_ 1297 "Response to SET and GET command messages. Default CAN ID 0x511.";
+CM_ BO_ 1313 "Current result. Default CAN ID 0x521.";
+CM_ BO_ 1314 "Voltage 1 result. Default CAN ID 0x522.";
+CM_ BO_ 1315 "Voltage 2 result. Default CAN ID 0x523.";
+CM_ BO_ 1316 "Voltage 3 result. Default CAN ID 0x524.";
+CM_ BO_ 1317 "Temperature result. Default CAN ID 0x525.";
+CM_ BO_ 1318 "Power result. Default CAN ID 0x526.";
+CM_ BO_ 1319 "Current counter result. Default CAN ID 0x527.";
+CM_ BO_ 1320 "Energy counter result. Default CAN ID 0x528.";
+
+CM_ SG_ 1041 Command_Mux "Mux byte per chapter 8 protocol.";
+CM_ SG_ 1297 Response_Mux "Mux byte per chapter 8 protocol.";
+CM_ SG_ 1313 IVT_Result_I "DB2..DB5 configured as Intel/little-endian (bit6=1 in channel config).";
+CM_ SG_ 1314 IVT_Result_U1 "DB2..DB5 configured as Intel/little-endian (bit6=1 in channel config).";
+CM_ SG_ 1315 IVT_Result_U2 "DB2..DB5 configured as Intel/little-endian (bit6=1 in channel config).";
+CM_ SG_ 1316 IVT_Result_U3 "DB2..DB5 configured as Intel/little-endian (bit6=1 in channel config).";
+CM_ SG_ 1317 IVT_Result_T "DB2..DB5 configured as Intel/little-endian (bit6=1 in channel config).";
+CM_ SG_ 1318 IVT_Result_W "DB2..DB5 configured as Intel/little-endian (bit6=1 in channel config).";
+CM_ SG_ 1319 IVT_Result_As "DB2..DB5 configured as Intel/little-endian (bit6=1 in channel config).";
+CM_ SG_ 1320 IVT_Result_Wh "DB2..DB5 configured as Intel/little-endian (bit6=1 in channel config).";
+CM_ SG_ 1313 IVT_Result_state "Bit0 OCS true; Bit1 out of range / reduced precision / measurement-error; Bit2 any measurement-error; Bit3 any system-error.";
+CM_ SG_ 1314 IVT_Result_state "Bit0 OCS true; Bit1 out of range / reduced precision / measurement-error; Bit2 any measurement-error; Bit3 any system-error.";
+CM_ SG_ 1315 IVT_Result_state "Bit0 OCS true; Bit1 out of range / reduced precision / measurement-error; Bit2 any measurement-error; Bit3 any system-error.";
+CM_ SG_ 1316 IVT_Result_state "Bit0 OCS true; Bit1 out of range / reduced precision / measurement-error; Bit2 any measurement-error; Bit3 any system-error.";
+CM_ SG_ 1317 IVT_Result_state "Bit0 OCS true; Bit1 out of range / reduced precision / measurement-error; Bit2 any measurement-error; Bit3 any system-error.";
+CM_ SG_ 1318 IVT_Result_state "Bit0 OCS true; Bit1 out of range / reduced precision / measurement-error; Bit2 any measurement-error; Bit3 any system-error.";
+CM_ SG_ 1319 IVT_Result_state "Bit0 OCS true; Bit1 out of range / reduced precision / measurement-error; Bit2 any measurement-error; Bit3 any system-error.";
+CM_ SG_ 1320 IVT_Result_state "Bit0 OCS true; Bit1 out of range / reduced precision / measurement-error; Bit2 any measurement-error; Bit3 any system-error.";
+
+VAL_ 1041 Command_Mux
+ 16 "SET_CAN_ID_Result_I"
+ 17 "SET_CAN_ID_Result_U1"
+ 18 "SET_CAN_ID_Result_U2"
+ 19 "SET_CAN_ID_Result_U3"
+ 20 "SET_CAN_ID_Result_T"
+ 21 "SET_CAN_ID_Result_W"
+ 22 "SET_CAN_ID_Result_As"
+ 23 "SET_CAN_ID_Result_Wh"
+ 29 "SET_CAN_ID_Command"
+ 31 "SET_CAN_ID_Response"
+ 32 "SET_CONFIG_Result_I"
+ 33 "SET_CONFIG_Result_U1"
+ 34 "SET_CONFIG_Result_U2"
+ 35 "SET_CONFIG_Result_U3"
+ 36 "SET_CONFIG_Result_T"
+ 37 "SET_CONFIG_Result_W"
+ 38 "SET_CONFIG_Result_As"
+ 39 "SET_CONFIG_Result_Wh"
+ 48 "RESET_ERROR_LOGDATA"
+ 49 "TRIGGER"
+ 50 "STORE"
+ 51 "START_OC_TEST"
+ 52 "SET_MODE"
+ 53 "SET_THRESHOLD_POS"
+ 54 "SET_THRESHOLD_NEG"
+ 58 "RESTART_TO_BITRATE"
+ 61 "RESTART_TO_DEFAULT"
+ 63 "RESTART"
+ 64 "GET_MEAS_ERRORS"
+ 65 "GET_SYS_ERRORS"
+ 66 "GET_OVERALL_LOGDATA"
+ 67 "GET_LOGDATA_SINCE_RESET"
+ 80 "GET_CAN_ID_Result_I"
+ 81 "GET_CAN_ID_Result_U1"
+ 82 "GET_CAN_ID_Result_U2"
+ 83 "GET_CAN_ID_Result_U3"
+ 84 "GET_CAN_ID_Result_T"
+ 85 "GET_CAN_ID_Result_W"
+ 86 "GET_CAN_ID_Result_As"
+ 87 "GET_CAN_ID_Result_Wh"
+ 93 "GET_CAN_ID_Command"
+ 95 "GET_CAN_ID_Response"
+ 96 "GET_CONFIG_Result_I"
+ 97 "GET_CONFIG_Result_U1"
+ 98 "GET_CONFIG_Result_U2"
+ 99 "GET_CONFIG_Result_U3"
+ 100 "GET_CONFIG_Result_T"
+ 101 "GET_CONFIG_Result_W"
+ 102 "GET_CONFIG_Result_As"
+ 103 "GET_CONFIG_Result_Wh"
+ 115 "GET_OC_TESTTIME"
+ 116 "GET_MODE"
+ 117 "GET_THRESHOLD_POS"
+ 118 "GET_THRESHOLD_NEG"
+ 121 "GET_DEVICE_ID"
+ 122 "GET_SW_VERSION"
+ 123 "GET_SERIAL_NUMBER"
+ 124 "GET_ARTICLE_NUMBER"
+;
+
+VAL_ 1297 Response_Mux
+ 128 "RSP_MEAS_ERRORS"
+ 129 "RSP_SYS_ERRORS"
+ 130 "RSP_OVERALL_LOGDATA"
+ 131 "RSP_LOGDATA_SINCE_RESET"
+ 144 "RSP_CAN_ID_Result_I"
+ 145 "RSP_CAN_ID_Result_U1"
+ 146 "RSP_CAN_ID_Result_U2"
+ 147 "RSP_CAN_ID_Result_U3"
+ 148 "RSP_CAN_ID_Result_T"
+ 149 "RSP_CAN_ID_Result_W"
+ 150 "RSP_CAN_ID_Result_As"
+ 151 "RSP_CAN_ID_Result_Wh"
+ 157 "RSP_CAN_ID_Command"
+ 159 "RSP_CAN_ID_Response"
+ 160 "RSP_CONFIG_Result_I"
+ 161 "RSP_CONFIG_Result_U1"
+ 162 "RSP_CONFIG_Result_U2"
+ 163 "RSP_CONFIG_Result_U3"
+ 164 "RSP_CONFIG_Result_T"
+ 165 "RSP_CONFIG_Result_W"
+ 166 "RSP_CONFIG_Result_As"
+ 167 "RSP_CONFIG_Result_Wh"
+ 176 "RSP_RESET_ERROR_LOGDATA"
+ 177 "RSP_TRIGGER"
+ 178 "RSP_STORE"
+ 179 "RSP_OC_TEST"
+ 180 "RSP_MODE"
+ 181 "RSP_THRESHOLD_POS"
+ 182 "RSP_THRESHOLD_NEG"
+ 185 "RSP_DEVICE_ID"
+ 186 "RSP_SW_VERSION"
+ 187 "RSP_SERIAL_NUMBER"
+ 188 "RSP_ARTICLE_NUMBER"
+ 191 "RSP_ALIVE"
+ 255 "RSP_INVALID_COMMAND"
+;
+
+VAL_ 1041 Cmd_Reset_Type
+ 0 "Reset_Measurement_Error"
+ 1 "Reset_System_Error"
+ 2 "Reset_Logdata_Since_Reset"
+;
+
+VAL_ 1041 Cmd_SetMode_Actual 0 "Stop" 1 "Run" ;
+VAL_ 1041 Cmd_SetMode_Startup 0 "Stop" 1 "Run" ;
+VAL_ 1297 Rsp_Mode_Actual 0 "Stop" 1 "Run" ;
+VAL_ 1297 Rsp_Mode_Startup 0 "Stop" 1 "Run" ;
+
+VAL_ 1041 Cmd_SetConfig_Mode_m32 0 "Disabled" 1 "Triggered" 2 "CyclicRunning" ;
+VAL_ 1041 Cmd_SetConfig_Mode_m33 0 "Disabled" 1 "Triggered" 2 "CyclicRunning" ;
+VAL_ 1041 Cmd_SetConfig_Mode_m34 0 "Disabled" 1 "Triggered" 2 "CyclicRunning" ;
+VAL_ 1041 Cmd_SetConfig_Mode_m35 0 "Disabled" 1 "Triggered" 2 "CyclicRunning" ;
+VAL_ 1041 Cmd_SetConfig_Mode_m36 0 "Disabled" 1 "Triggered" 2 "CyclicRunning" ;
+VAL_ 1041 Cmd_SetConfig_Mode_m37 0 "Disabled" 1 "Triggered" 2 "CyclicRunning" ;
+VAL_ 1041 Cmd_SetConfig_Mode_m38 0 "Disabled" 1 "Triggered" 2 "CyclicRunning" ;
+VAL_ 1041 Cmd_SetConfig_Mode_m39 0 "Disabled" 1 "Triggered" 2 "CyclicRunning" ;
+
+VAL_ 1297 Rsp_Config_Mode_m160 0 "Disabled" 1 "Triggered" 2 "CyclicRunning" ;
+VAL_ 1297 Rsp_Config_Mode_m161 0 "Disabled" 1 "Triggered" 2 "CyclicRunning" ;
+VAL_ 1297 Rsp_Config_Mode_m162 0 "Disabled" 1 "Triggered" 2 "CyclicRunning" ;
+VAL_ 1297 Rsp_Config_Mode_m163 0 "Disabled" 1 "Triggered" 2 "CyclicRunning" ;
+VAL_ 1297 Rsp_Config_Mode_m164 0 "Disabled" 1 "Triggered" 2 "CyclicRunning" ;
+VAL_ 1297 Rsp_Config_Mode_m165 0 "Disabled" 1 "Triggered" 2 "CyclicRunning" ;
+VAL_ 1297 Rsp_Config_Mode_m166 0 "Disabled" 1 "Triggered" 2 "CyclicRunning" ;
+VAL_ 1297 Rsp_Config_Mode_m167 0 "Disabled" 1 "Triggered" 2 "CyclicRunning" ;
+
+VAL_ 1041 Cmd_RestartToBitrate_Code 8 "250k" 4 "500k" 2 "1000k" ;
+
+VAL_ 1297 Rsp_Device_Type 2 "IVT-S" ;
+VAL_ 1297 Rsp_Device_VoltageChannels 0 "U0" 3 "U3" ;
+VAL_ 1297 Rsp_Device_Feature 3 "Isolation" ;
+VAL_ 1297 Rsp_Device_CommType 0 "None" 1 "CAN1_Termination" 2 "CAN2_NoTermination" ;
+VAL_ 1297 Rsp_Device_SupplyType 1 "12_24V" ;

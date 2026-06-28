@@ -1,122 +1,93 @@
 # CANRS485_G473
 
-STM32G473RCT6 telemetry gateway firmware derived from the older `CAN2RS485`
-STM32F405 project. The target board has three internal FDCAN buses, one external
-MCP2518FD CAN controller, and one USART2 RS485 telemetry output.
+`CANRS485_G473` 是旧 `CAN2RS485` 固件的 STM32G473 版本，用于把车上 CAN 数据编码为
+`fsae_TelemetryFrame`，再通过 `USART2 + RS485` 发送给 DTU。
 
-## Current Status
+本工程目标是直接替代旧 F405 工程，同时保留旧项目已经验证过的 CAN 解析、protobuf 编码、
+RS485 上报节奏和服务器协议资料。
 
-- Builds with the CMake `Debug` preset.
-- Old F405 `CAN1` 250 kbps business parser is mapped to `FDCAN3`.
-- Old F405 `CAN2` 500 kbps business parser is mapped to `FDCAN2` / `CANB`.
-- Telemetry protobuf encoding still uses the existing `fsae_TelemetryFrame`
-  nanopb schema.
-- RS485 output uses `USART2` with hardware DE on `PA1`.
-- `CANA` / `FDCAN1` is initialized and accepts frames, but no business protocol
-  is attached to it yet.
-- `CANC` / MCP2518FD hardware pins are configured, but the MCP2518FD driver is
-  not implemented yet.
+## 当前状态
 
-## Hardware Mapping
+- 已从旧 `CAN2RS485` 迁移主业务代码到 `Core/Src/app.c`。
+- 旧 F405 `CAN1` 250 kbit/s 业务链路映射到 G473 `FDCAN3`。
+- 旧 F405 `CAN2` 500 kbit/s 业务链路映射到 G473 `FDCAN2` / `CANB`。
+- `FDCAN1` / `CANA` 已初始化并配置全通接收，但当前不参与旧业务解析。
+- `CANC` 的 MCP2518FD 驱动尚未实现。
+- `USART2` 使用硬件 RS485 DE，`PA1=DE`，不再使用旧 F405 的 `RS485_DIR` GPIO。
+- protobuf / nanopb 发送格式保持旧项目的 `fsae_TelemetryFrame`。
+- 已包含旧项目中真实有用的 `REFERENCE` 和 `DOC` 资料；旧 F405 的 `STM32CubeF4-master`
+  固件包没有复制到本仓库。
 
-| Bus | Controller | Pins | Bitrate | Firmware role |
+## 硬件与总线映射
+
+| 名称 | 控制器 | 引脚 | 速率 | 当前软件职责 |
 | --- | --- | --- | --- | --- |
-| CANA | FDCAN1 | PA11 / PA12 | 500 kbps | Bring-up only for now |
-| CANB | FDCAN2 | PB12 / PB13 | 500 kbps | Successor of old F405 CAN2 |
-| CAN1 | FDCAN3 | PB3 / PB4 | 250 kbps | Successor of old F405 CAN1 |
-| CANC | MCP2518FD over SPI1 | PA4 / PA5 / PA6 / PA7 + PC4 INT | 500 kbps | Not implemented |
-| RS485 | USART2 hardware DE | PA1 / PA2 / PA3 | 115200 8N1 | Telemetry output |
-| LED0 | GPIO | PC8 | n/a | High level on |
+| CANA | FDCAN1 | PA11 / PA12 | 500 kbit/s | 已初始化，暂不解析业务 |
+| CANB | FDCAN2 | PB12 / PB13 | 500 kbit/s | 旧 F405 `CAN2` 的替代口 |
+| CAN1 | FDCAN3 | PB3 / PB4 | 250 kbit/s | 旧 F405 `CAN1` 的替代口 |
+| CANC | MCP2518FD + SPI1 | PA4 / PA5 / PA6 / PA7 + PC4 | 500 kbit/s | 待实现驱动 |
+| RS485 | USART2 | PA1 / PA2 / PA3 | 115200 8N1 | DTU 上报口 |
+| 调试串口 | USART1 | PA9 / PA10 | 115200 8N1 | 默认关闭的调试 CLI |
+| 状态灯 | GPIO | PC8 | - | 高电平点亮 |
 
-## Build
+## 业务行为
 
-```sh
+- 收到 `CAN1/FDCAN3` 或 `CANB/FDCAN2` 任一总线的有效业务数据后开始周期上报。
+- 基础遥测帧周期为 `100 ms`。
+- 带 `modules` 的低频帧周期为 `500 ms`。
+- CAN RX 回调单次最多处理 `8` 帧，避免长时间占用中断。
+- 调试 CLI 默认关闭：`APP_DEBUG_CLI_ENABLE = 0U`。
+- 电池模组数量、电芯数量、温度点数量和 nanopb `modules` 容量有编译期断言保护。
+- CANB 能量计逻辑沿用旧项目的自动模式：
+  - 有新鲜 `0x430` 状态帧时，`0x521/0x522/0x526/0x528` 按赛会 FS Datalogger 大端 result 帧解析。
+  - 没有新鲜 `0x430` 时，`0x52x` 结果帧按现场约定用字节序区分赛会能量计和自家 IVT。
+
+## 目录说明
+
+- `Core/Src/app.c`：业务主逻辑，包含 CAN 解析、状态聚合、protobuf 编码、RS485 发送。
+- `Middlewares/Third_Party/nanopb/`：旧项目迁移来的 nanopb 与生成代码。
+- `REFERENCE/protobuf-master/`：服务器、protobuf、仿真和 STM32 端协议资料。
+- `REFERENCE/旧主控 CAN 通讯协议.md`：旧主控 CAN 协议。
+- `REFERENCE/新主控 CAN 通讯协议.md`：新主控 CAN 协议。
+- `REFERENCE/*.dbc`：CANA/CANB、IVT、FS Datalogger 等参考 DBC。
+- `DOC/`：当前 G473 工程说明和迁移待办。
+- `CANRS485_G473.ioc`：CubeMX 配置源头。
+- `AGENTS.md`：给代码代理使用的工程约束。
+
+## 构建
+
+```bash
 cmake --preset Debug
 cmake --build --preset Debug
 ```
 
-For a clean check:
+清理后重新构建：
 
-```sh
+```bash
 cmake --build --preset Debug --clean-first
 ```
 
-The build currently produces `CANRS485_G473.elf` under `build/Debug/`.
+构建产物位于 `build/Debug/`：
 
-## Firmware Architecture
+- `CANRS485_G473.elf`
+- `CANRS485_G473.hex`
+- `CANRS485_G473.bin`
 
-- `Core/Src/app.c` contains business logic:
-  - FDCAN filter setup and RX callback routing.
-  - Old CAN1 and CAN2 protocol parsing.
-  - Telemetry snapshot freshness handling.
-  - nanopb encoding.
-  - USART2 RS485 transmit path.
-- CubeMX generated files should only be edited inside USER CODE blocks unless
-  the matching `.ioc` setting is changed.
-- `Middlewares/Third_Party/nanopb/` is copied from the old F405 project to keep
-  protobuf compatibility.
+## 当前仍需完善
 
-## Known Issues
+- 实现 `CANC` / MCP2518FD 驱动。
+- 明确 `CANA` 的业务协议后，将对应解析接入 `App_ProcessCanRx()`。
+- 增加 FDCAN 错误计数、协议状态、bus-off 状态和发送失败统计。
+- 按 G473 工程更新调试 CLI 输出，使其显示 `CANA/CANB/CAN1` 而不是旧 `CAN1/CAN2` 视角。
+- 如需修改 protobuf 字段，必须同步更新 `.proto`、nanopb 生成代码、服务器 `telegraf.conf`
+  和相关说明文档。
 
-1. MCP2518FD / CANC is not usable yet.
-   The SPI pins, CS, and INT pin are configured, but there is no register driver,
-   oscillator check, bit timing setup, RX FIFO handling, or bus error handling.
+## 参考资料
 
-2. CANA has no assigned protocol.
-   FDCAN1 starts and receives, but `App_ProcessCanRx()` intentionally ignores it
-   until its physical role is confirmed.
-
-3. Hardware bring-up is not verified.
-   The current validation is compile-time only. SWD, CH340X auto-boot, FDCAN
-   bus timing, RS485 DE timing, and LED polarity still need board-level checks.
-
-4. FDCAN error handling is minimal.
-   The app starts the buses and handles RX, but does not yet record protocol
-   status, error counters, bus-off recovery, or TX failure telemetry.
-
-5. RS485 command RX is paused during telemetry TX.
-   This follows the old firmware behavior and avoids half-duplex contention, but
-   it should be checked with the DTU and real traffic rate.
-
-6. Generated CubeMX settings need discipline.
-   Re-generating from CubeMX is allowed, but any change to FDCAN filter counts,
-   USART2 RS485 mode, or PB4/UCPD handling must be reviewed before committing.
-
-## Can Be Implemented Now
-
-- Add FDCAN error/status counters and expose them through the debug CLI.
-- Add a lightweight CANA raw-frame counter so CANA bring-up can be observed
-  before its business protocol is known.
-- Add a minimal MCP2518FD SPI register read smoke test, once the exact register
-  constants are taken from the Microchip datasheet or driver source.
-- Add `objcopy` post-build generation for `.hex` and `.bin`, matching the old
-  project.
-- Add debug CLI commands for G473 bus mapping, FDCAN error counters, and recent
-  CANA/CANB/CAN1 frames.
-- Add a flash task or script for STM32CubeProgrammer after the preferred probe
-  and interface are confirmed.
-
-## Needs Hardware Confirmation First
-
-- CH340X DTR/RTS polarity and BOOT0 option-byte behavior.
-- RS485 DE assertion/deassertion timing on PA1.
-- CAN transceiver wiring and termination on CANA, CANB, CAN1, and CANC.
-- MCP2518FD SPI mode, crystal startup, INT polarity, and register access.
-- Which real vehicle subsystem should connect to CANA and CANC.
-
-## Bring-Up Order
-
-1. Flash over SWD and confirm PC8 LED behavior.
-2. Confirm USART1 logging or bootloader access through CH340X.
-3. Confirm USART2 RS485 waveform and DE timing on PA1.
-4. Confirm FDCAN3 receives old 250 kbps CAN1 traffic.
-5. Confirm FDCAN2 receives old 500 kbps CAN2 traffic and can transmit mode
-   commands.
-6. Confirm FDCAN1 physical receive path with a CAN analyzer.
-7. Bring up MCP2518FD by reading registers over SPI before enabling CANC traffic.
-
-## Repository Notes
-
-- Remote: `https://github.com/totok22/CANRS485_G473.git`
-- Main branch: `main`
-- Do not commit `build/` output.
+- [DOC/todo.md](./DOC/todo.md)
+- [DOC/电路信息.md](./DOC/%E7%94%B5%E8%B7%AF%E4%BF%A1%E6%81%AF.md)
+- [REFERENCE/旧主控 CAN 通讯协议.md](./REFERENCE/%E6%97%A7%E4%B8%BB%E6%8E%A7%20CAN%20%E9%80%9A%E8%AE%AF%E5%8D%8F%E8%AE%AE.md)
+- [REFERENCE/新主控 CAN 通讯协议.md](./REFERENCE/%E6%96%B0%E4%B8%BB%E6%8E%A7%20CAN%20%E9%80%9A%E8%AE%AF%E5%8D%8F%E8%AE%AE.md)
+- [REFERENCE/protobuf-master/README.md](./REFERENCE/protobuf-master/README.md)
+- [REFERENCE/protobuf-master/PROTO_GUIDE.md](./REFERENCE/protobuf-master/PROTO_GUIDE.md)
+- [REFERENCE/protobuf-master/STM32_GUIDE.md](./REFERENCE/protobuf-master/STM32_GUIDE.md)

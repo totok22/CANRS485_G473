@@ -1,0 +1,23 @@
+{
+  "cmake.useCMakePresets": "always",
+  "cmake.configureOnOpen": true,
+  "cmake.configurePreset": "Debug",
+  "cmake.buildPreset": "Debug",
+  "cmake.preferredGenerators": [
+    "Ninja"
+  ],
+  "cmake.statusbar.advanced": {
+    "debug": {
+      "visibility": "visible"
+    },
+    "launch": {
+      "visibility": "hidden"
+    },
+    "build": {
+      "visibility": "visible"
+    },
+    "buildTarget": {
+      "visibility": "visible"
+    }
+  }
+}
