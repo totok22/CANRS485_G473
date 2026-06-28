@@ -6,9 +6,14 @@
 #include <stdio.h>
 #include <string.h>
 
+#include "app_command_parser.h"
+#include "app_config.h"
+#include "app_utils.h"
 #include "fdcan.h"
 #include "gpio.h"
 #include "main.h"
+#include "mcp2518fd.h"
+#include "spi.h"
 #include "usart.h"
 
 #include "fsae_telemetry.pb.h"
@@ -99,7 +104,6 @@
 #define APP_LED_SLOW_BLINK_MS           500U
 #define APP_BASE_TELEMETRY_PERIOD_MS    100U
 #define APP_MODULE_TELEMETRY_PERIOD_MS  500U
-#define APP_SNAPSHOT_TIMEOUT_MS         2000U
 #define APP_RS485_TX_TIMEOUT_MS         200U
 #define APP_DEBUG_CLI_ENABLE            0U
 #define APP_DEBUG_UART_TIMEOUT_MS       50U
@@ -108,6 +112,7 @@
 #define APP_DEBUG_CLI_BUFFER_SIZE       32U
 #define APP_DEBUG_CAN_ID_COUNTER_COUNT  16U
 #define APP_CAN_RX_MAX_FRAMES_PER_IRQ   8U
+#define APP_MCP2518_RX_MAX_FRAMES_PER_POLL  8U
 #define APP_COMMAND_RX_BUFFER_SIZE      16U
 #define APP_COMMAND_RX_IDLE_MS          20U
 
@@ -121,11 +126,6 @@
 #define APP_IMU_ANGLE_SUBCMD_PITCH      0x02U
 #define APP_IMU_ANGLE_SUBCMD_YAW        0x03U
 #define APP_IMU_FORWARD_QUEUE_DEPTH     16U
-
-#define APP_MODE_CMD_STRAIGHT           48U
-#define APP_MODE_CMD_AUTOCROSS          49U
-#define APP_MODE_CMD_SKIDPAD            50U
-#define APP_MODE_CMD_ENDURANCE          51U
 
 /* PC8 LED0 is high-level on in the G473 board notes. */
 #define APP_LED_ON_STATE                GPIO_PIN_SET
@@ -154,7 +154,8 @@ typedef enum
 {
   APP_FDCAN_BUS_CANA = 0,
   APP_FDCAN_BUS_CANB,
-  APP_FDCAN_BUS_CAN1
+  APP_FDCAN_BUS_CAN1,
+  APP_FDCAN_BUS_CANC
 } AppFdcanBus;
 
 typedef struct
@@ -367,6 +368,7 @@ static volatile uint8_t g_command_rx_overflow;
 static volatile uint32_t g_command_rx_updated_ms;
 static uint8_t g_command_pending_value;
 static uint8_t g_command_pending;
+static uint8_t g_canc_ready;
 #if APP_DEBUG_CLI_ENABLE
 static uint8_t g_debug_last_command_bytes[APP_COMMAND_RX_BUFFER_SIZE];
 static uint8_t g_debug_last_command_length;
@@ -381,15 +383,6 @@ static HAL_StatusTypeDef g_debug_last_mode_tx_status;
 static uint32_t g_debug_last_mode_tx_ms;
 #endif
 
-static uint16_t App_ReadBe16(const uint8_t *data);
-static uint16_t App_ReadLe16(const uint8_t *data);
-static int16_t App_ReadLe16Signed(const uint8_t *data);
-static uint32_t App_ReadLe32(const uint8_t *data);
-static int32_t App_ReadBe32Signed(const uint8_t *data);
-#if APP_CAN2_ENERGY_METER_MODE != APP_CAN2_ENERGY_METER_MODE_FS
-static int32_t App_ReadLe32Signed(const uint8_t *data);
-#endif
-static uint8_t App_IsFresh(uint32_t now, uint32_t updated_ms);
 static uint8_t App_IvtStateIsUsable(uint8_t state);
 #if APP_CAN2_ENERGY_METER_MODE != APP_CAN2_ENERGY_METER_MODE_FS
 static uint8_t App_IvtValueIsPlausible(uint32_t std_id, int32_t value);
@@ -418,23 +411,20 @@ static void App_DebugRecordModeTx(uint8_t command_value, HAL_StatusTypeDef statu
 #endif
 static void App_CommandPoll(uint32_t now);
 static void App_CommandRxByte(uint8_t rx);
-static uint8_t App_CommandTryParse(const uint8_t *data, uint8_t length, uint8_t *command_value);
-static uint8_t App_CommandTryParseWord(const uint8_t *data, uint8_t length, uint8_t *command_value);
-static uint8_t App_CommandEqualsWord(const uint8_t *data, uint8_t length, const char *word);
 static void App_CommandQueue(uint8_t command_value);
 static void App_CommandServiceTx(void);
 static void App_CommandRestartRx(void);
 static HAL_StatusTypeDef App_SendModeCommand(uint8_t command_value);
 static void App_Can2ServiceTxQueue(void);
 static uint8_t App_Can2QueueTx(uint32_t std_id, const uint8_t *data, uint8_t dlc);
+static void App_Mcp2518ServiceRx(void);
 static HAL_StatusTypeDef App_FDCAN_ConfigFilter(FDCAN_HandleTypeDef *hfdcan);
 static void App_ProcessCanRx(AppFdcanBus bus, const AppCanRxHeader *header, const uint8_t *data);
 static void App_ProcessCan1Rx(const AppCanRxHeader *header, const uint8_t *data);
 static void App_ProcessCan2Rx(const AppCanRxHeader *header, const uint8_t *data);
 static AppFdcanBus App_FdcanBusFromHandle(const FDCAN_HandleTypeDef *hfdcan);
-static uint8_t App_FdcanDlcToBytes(uint32_t dlc);
 static void App_ConvertFdcanRxHeader(const FDCAN_RxHeaderTypeDef *src, AppCanRxHeader *dst);
-static uint32_t App_FdcanDlcFromBytes(uint8_t bytes);
+static void App_ConvertMcp2518RxHeader(const MCP2518FD_CanFrame *src, AppCanRxHeader *dst);
 static uint8_t App_ProcessCan1Ext(uint32_t ext_id, const uint8_t *data, uint8_t dlc);
 static uint8_t App_ProcessCan2Ext(uint32_t ext_id, const uint8_t *data, uint8_t dlc);
 static uint8_t App_ProcessCan2Std(uint32_t std_id, const uint8_t *data, uint8_t dlc);
@@ -516,6 +506,7 @@ void App_Init(void)
   g_command_rx_updated_ms = 0U;
   g_command_pending_value = 0U;
   g_command_pending = 0U;
+  g_canc_ready = 0U;
 #if APP_DEBUG_CLI_ENABLE
   g_debug_last_command_length = 0U;
   g_debug_last_command_parse_ok = 0U;
@@ -576,6 +567,11 @@ void App_Init(void)
     Error_Handler();
   }
 
+  if (MCP2518FD_Init(&hspi1) == HAL_OK)
+  {
+    g_canc_ready = 1U;
+  }
+
 #if APP_DEBUG_CLI_ENABLE
   if (HAL_UART_Receive_IT(&huart1, (uint8_t *)&g_cli_rx_byte, 1U) != HAL_OK)
   {
@@ -599,6 +595,7 @@ void App_Run(void)
   App_CommandPoll(now);
   App_CommandServiceTx();
   App_Can2ServiceTxQueue();
+  App_Mcp2518ServiceRx();
 
   if ((g_app_state.can1_seen == 0U) && (g_app_state.can2_seen == 0U))
   {
@@ -651,6 +648,14 @@ void HAL_FDCAN_RxFifo0Callback(FDCAN_HandleTypeDef *hfdcan, uint32_t RxFifo0ITs)
   }
 }
 
+void HAL_GPIO_EXTI_Callback(uint16_t GPIO_Pin)
+{
+  if (GPIO_Pin == MCP2518_INT_Pin)
+  {
+    MCP2518FD_OnInterrupt();
+  }
+}
+
 static AppFdcanBus App_FdcanBusFromHandle(const FDCAN_HandleTypeDef *hfdcan)
 {
   if (hfdcan->Instance == FDCAN3)
@@ -664,19 +669,6 @@ static AppFdcanBus App_FdcanBusFromHandle(const FDCAN_HandleTypeDef *hfdcan)
   return APP_FDCAN_BUS_CANA;
 }
 
-static uint8_t App_FdcanDlcToBytes(uint32_t dlc)
-{
-  static const uint8_t dlc_to_bytes[] = {0U, 1U, 2U, 3U, 4U, 5U, 6U, 7U,
-                                         8U, 12U, 16U, 20U, 24U, 32U, 48U, 64U};
-
-  if (dlc < (sizeof(dlc_to_bytes) / sizeof(dlc_to_bytes[0])))
-  {
-    return dlc_to_bytes[dlc];
-  }
-
-  return 0U;
-}
-
 static void App_ConvertFdcanRxHeader(const FDCAN_RxHeaderTypeDef *src, AppCanRxHeader *dst)
 {
   dst->IDE = (src->IdType == FDCAN_EXTENDED_ID) ? APP_CAN_ID_EXT : APP_CAN_ID_STD;
@@ -685,58 +677,12 @@ static void App_ConvertFdcanRxHeader(const FDCAN_RxHeaderTypeDef *src, AppCanRxH
   dst->DLC = App_FdcanDlcToBytes(src->DataLength);
 }
 
-static uint32_t App_FdcanDlcFromBytes(uint8_t bytes)
+static void App_ConvertMcp2518RxHeader(const MCP2518FD_CanFrame *src, AppCanRxHeader *dst)
 {
-  if (bytes >= 8U)
-  {
-    return FDCAN_DLC_BYTES_8;
-  }
-
-  return (uint32_t)bytes;
-}
-
-static uint16_t App_ReadBe16(const uint8_t *data)
-{
-  return (uint16_t)(((uint16_t)data[0] << 8) | data[1]);
-}
-
-static uint16_t App_ReadLe16(const uint8_t *data)
-{
-  return (uint16_t)(((uint16_t)data[1] << 8) | data[0]);
-}
-
-static int16_t App_ReadLe16Signed(const uint8_t *data)
-{
-  return (int16_t)App_ReadLe16(data);
-}
-
-static uint32_t App_ReadLe32(const uint8_t *data)
-{
-  return ((uint32_t)data[3] << 24) |
-         ((uint32_t)data[2] << 16) |
-         ((uint32_t)data[1] << 8) |
-         (uint32_t)data[0];
-}
-
-static int32_t App_ReadBe32Signed(const uint8_t *data)
-{
-  uint32_t value = ((uint32_t)data[0] << 24) |
-                   ((uint32_t)data[1] << 16) |
-                   ((uint32_t)data[2] << 8) |
-                   (uint32_t)data[3];
-  return (int32_t)value;
-}
-
-#if APP_CAN2_ENERGY_METER_MODE != APP_CAN2_ENERGY_METER_MODE_FS
-static int32_t App_ReadLe32Signed(const uint8_t *data)
-{
-  return (int32_t)App_ReadLe32(data);
-}
-#endif
-
-static uint8_t App_IsFresh(uint32_t now, uint32_t updated_ms)
-{
-  return (updated_ms != 0U) && (((uint32_t)(now - updated_ms)) <= APP_SNAPSHOT_TIMEOUT_MS);
+  dst->IDE = (src->id_type == MCP2518FD_ID_EXTENDED) ? APP_CAN_ID_EXT : APP_CAN_ID_STD;
+  dst->StdId = (src->id_type == MCP2518FD_ID_STANDARD) ? src->id : 0U;
+  dst->ExtId = (src->id_type == MCP2518FD_ID_EXTENDED) ? src->id : 0U;
+  dst->DLC = src->dlc;
 }
 
 static uint8_t App_IvtStateIsUsable(uint8_t state)
@@ -884,7 +830,9 @@ static void App_DebugRecordCanRx(AppFdcanBus bus, const AppCanRxHeader *header, 
 #if APP_DEBUG_CLI_ENABLE
   uint32_t primask = __get_PRIMASK();
   AppCanTraceFrame *slot = (AppCanTraceFrame *)&g_can_trace[g_can_trace_write_index];
-  uint8_t bus_index = (bus == APP_FDCAN_BUS_CAN1) ? 1U : ((bus == APP_FDCAN_BUS_CANB) ? 2U : 0U);
+  uint8_t bus_index = (bus == APP_FDCAN_BUS_CAN1) ? 1U :
+                      ((bus == APP_FDCAN_BUS_CANB) ? 2U :
+                      ((bus == APP_FDCAN_BUS_CANC) ? 3U : 0U));
   uint8_t is_extended_id = (header->IDE == APP_CAN_ID_EXT) ? 1U : 0U;
   uint32_t id = (header->IDE == APP_CAN_ID_EXT) ? header->ExtId : header->StdId;
   uint32_t now = HAL_GetTick();
@@ -1302,115 +1250,6 @@ static void App_CommandRxByte(uint8_t rx)
   }
 }
 
-static uint8_t App_CommandTryParse(const uint8_t *data, uint8_t length, uint8_t *command_value)
-{
-  uint8_t start = 0U;
-  uint8_t end = length;
-  uint16_t decimal_value = 0U;
-  uint8_t i;
-  uint8_t has_digit = 0U;
-
-  while ((start < end) && ((data[start] == ' ') || (data[start] == '\t')))
-  {
-    start++;
-  }
-  while ((end > start) && ((data[end - 1U] == ' ') || (data[end - 1U] == '\t')))
-  {
-    end--;
-  }
-
-  if (end <= start)
-  {
-    return 0U;
-  }
-
-  if ((end - start) == 1U)
-  {
-    uint8_t value = data[start];
-    if ((value >= APP_MODE_CMD_STRAIGHT) && (value <= APP_MODE_CMD_ENDURANCE))
-    {
-      *command_value = value;
-      return 1U;
-    }
-  }
-
-  for (i = start; i < end; ++i)
-  {
-    if ((data[i] < '0') || (data[i] > '9'))
-    {
-      has_digit = 0U;
-      break;
-    }
-    has_digit = 1U;
-    decimal_value = (uint16_t)((decimal_value * 10U) + (uint16_t)(data[i] - '0'));
-  }
-
-  if ((has_digit != 0U) &&
-      (decimal_value >= APP_MODE_CMD_STRAIGHT) &&
-      (decimal_value <= APP_MODE_CMD_ENDURANCE))
-  {
-    *command_value = (uint8_t)decimal_value;
-    return 1U;
-  }
-
-  return App_CommandTryParseWord(&data[start], (uint8_t)(end - start), command_value);
-}
-
-static uint8_t App_CommandTryParseWord(const uint8_t *data, uint8_t length, uint8_t *command_value)
-{
-  if (App_CommandEqualsWord(data, length, "straight") != 0U)
-  {
-    *command_value = APP_MODE_CMD_STRAIGHT;
-    return 1U;
-  }
-  if ((App_CommandEqualsWord(data, length, "autocross") != 0U) ||
-      (App_CommandEqualsWord(data, length, "avoidance") != 0U))
-  {
-    *command_value = APP_MODE_CMD_AUTOCROSS;
-    return 1U;
-  }
-  if (App_CommandEqualsWord(data, length, "skidpad") != 0U)
-  {
-    *command_value = APP_MODE_CMD_SKIDPAD;
-    return 1U;
-  }
-  if (App_CommandEqualsWord(data, length, "endurance") != 0U)
-  {
-    *command_value = APP_MODE_CMD_ENDURANCE;
-    return 1U;
-  }
-
-  return 0U;
-}
-
-static uint8_t App_CommandEqualsWord(const uint8_t *data, uint8_t length, const char *word)
-{
-  uint8_t i = 0U;
-
-  while (word[i] != '\0')
-  {
-    uint8_t ch;
-
-    if (i >= length)
-    {
-      return 0U;
-    }
-
-    ch = data[i];
-    if ((ch >= 'A') && (ch <= 'Z'))
-    {
-      ch = (uint8_t)(ch + ('a' - 'A'));
-    }
-    if (ch != (uint8_t)word[i])
-    {
-      return 0U;
-    }
-    i++;
-  }
-
-  return (i == length) ? 1U : 0U;
-}
-
 static void App_CommandQueue(uint8_t command_value)
 {
   __disable_irq();
@@ -1560,6 +1399,35 @@ static uint8_t App_Can2QueueTx(uint32_t std_id, const uint8_t *data, uint8_t dlc
   __enable_irq();
 
   return 1U;
+}
+
+static void App_Mcp2518ServiceRx(void)
+{
+  MCP2518FD_CanFrame frame;
+  AppCanRxHeader header;
+  uint8_t received;
+  uint8_t frames_processed = 0U;
+
+  if ((g_canc_ready == 0U) || (MCP2518FD_IsReady() == 0U))
+  {
+    return;
+  }
+
+  while (frames_processed < APP_MCP2518_RX_MAX_FRAMES_PER_POLL)
+  {
+    if (MCP2518FD_Receive(&frame, &received) != HAL_OK)
+    {
+      return;
+    }
+    if (received == 0U)
+    {
+      return;
+    }
+
+    App_ConvertMcp2518RxHeader(&frame, &header);
+    App_ProcessCanRx(APP_FDCAN_BUS_CANC, &header, frame.data);
+    frames_processed++;
+  }
 }
 
 static HAL_StatusTypeDef App_FDCAN_ConfigFilter(FDCAN_HandleTypeDef *hfdcan)

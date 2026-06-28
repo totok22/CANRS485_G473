@@ -1,0 +1,11 @@
+#ifndef __APP_CONFIG_H__
+#define __APP_CONFIG_H__
+
+#define APP_SNAPSHOT_TIMEOUT_MS 2000U
+
+#define APP_MODE_CMD_STRAIGHT   48U
+#define APP_MODE_CMD_AUTOCROSS  49U
+#define APP_MODE_CMD_SKIDPAD    50U
+#define APP_MODE_CMD_ENDURANCE  51U
+
+#endif /* __APP_CONFIG_H__ */

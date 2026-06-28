@@ -83,6 +83,8 @@
   - `PA6=SPI1_MISO`
   - `PA7=SPI1_MOSI`
 - `PA4` 不交给 SPI NSS，由 GPIO `MCP2518_CS` 控制。
+- 应用驱动位于 `Core/Src/mcp2518fd.c`，当前按 `40 MHz` MCP 晶振配置 500 kbit/s Classic CAN。
+- `PC4/EXTI4` 回调只置位 MCP2518FD 中断标志；SPI 读写在 `App_Run()` 轮询路径执行。
 
 ## NVIC
 

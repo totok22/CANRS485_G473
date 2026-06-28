@@ -15,13 +15,14 @@
 - [x] 迁移 nanopb 和 `fsae_TelemetryFrame` 生成代码。
 - [x] 迁移 `REFERENCE/protobuf-master`、新旧主控协议、DBC、IVT/FS 资料。
 - [x] 构建输出 `.elf`、`.hex`、`.bin`。
+- [x] 实现 MCP2518FD 基础 SPI 读写、初始化、Classic CAN RX/TX FIFO 驱动。
 
 ## 当前可以继续实现
 
 - [ ] 增加 FDCAN 错误计数、协议状态、bus-off 状态和发送失败统计。
 - [ ] 改造调试 CLI，使 `status`、`can`、`ids` 输出显示 `CANA/CANB/CAN1`。
 - [ ] 给 `CANA/FDCAN1` 增加原始帧计数和最近帧记录，但暂不做业务解析。
-- [ ] 实现 MCP2518FD 基础 SPI 读寄存器函数和寄存器通信检查。
+- [ ] 上板验证 MCP2518FD `OSC/C1CON/C1FIFOSTA` 读回值和 500 kbit/s 收发。
 - [ ] 为 CANB 模式命令发送增加 FDCAN TX 失败计数。
 
 ## 需要明确协议或硬件职责后再做

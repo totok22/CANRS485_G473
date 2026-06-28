@@ -45,6 +45,9 @@ target_link_directories(${CMAKE_PROJECT_NAME} PRIVATE
 # Add sources to executable
 target_sources(${CMAKE_PROJECT_NAME} PRIVATE
     Core/Src/app.c
+    Core/Src/app_command_parser.c
+    Core/Src/app_utils.c
+    Core/Src/mcp2518fd.c
     Middlewares/Third_Party/nanopb/src/fsae_telemetry.pb.c
     Middlewares/Third_Party/nanopb/src/pb_common.c
     Middlewares/Third_Party/nanopb/src/pb_encode.c

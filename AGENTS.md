@@ -2,7 +2,7 @@
 
 ## 代码边界
 
-- `Core/Src/app.c`、`Core/Inc/app.h` 是业务代码：CAN 解析、状态聚合、protobuf 编码、RS485 发送。
+- `Core/Src/app.c`、`Core/Inc/app.h` 和 `Core/Src/app_*.c`、`Core/Inc/app_*.h` 是业务代码：CAN 解析、状态聚合、protobuf 编码、RS485 发送及其内部辅助模块。
 - `main.c`、`fdcan.c`、`usart.c`、`gpio.c`、`spi.c`、`stm32g4xx_it.c` 是 CubeMX 生成文件；除同步修改 `.ioc` 外，只改 USER CODE 区。
 - `Middlewares/Third_Party/nanopb/` 是生成/第三方代码；改 protobuf 时必须从 `.proto/.options` 重新生成。
 - `Drivers/`、启动文件和链接脚本默认不改。
@@ -20,6 +20,7 @@
 - 旧项目 `/Users/poli/STM32CubeIDE/workspace_2.1.1/CAN2RS485` 是当前业务行为基准。
 - CAN 协议判断优先看 `REFERENCE/旧主控 CAN 通讯协议.md`、`REFERENCE/新主控 CAN 通讯协议.md`。
 - protobuf/服务器协议优先看 `REFERENCE/protobuf-master/`。
+- 对 STM32G4 HAL、启动流程、外设寄存器或 CubeMX 生成语义不确定时，不要猜；优先查官方源码 `/Users/poli/stm32g4/STM32CubeG4-master`，再决定实现。
 - 不要随意改 CAN ID、字节序、单位、鲜度窗口、100 ms/500 ms 上报节奏或 `fsae_TelemetryFrame` 布局。
 
 ## 中断与时序
