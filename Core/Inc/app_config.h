@@ -21,4 +21,20 @@
 #define APP_COMMAND_RX_BUFFER_SIZE 16U
 #define APP_COMMAND_RX_IDLE_MS     20U
 
+#define APP_CAN1_PACK_SUMMARY_ID        0x186050F4UL
+#define APP_CAN2_MODE_COMMAND_ID        0x0310U
+
+#define APP_IVT_RESULT_ERROR_MASK       0x0EU
+#define APP_ENERGY_METER_SOURCE_UNKNOWN 0U
+#define APP_ENERGY_METER_SOURCE_IVT     1U
+#define APP_ENERGY_METER_SOURCE_FS      2U
+
+#define APP_MOTOR_FL                    0U
+#define APP_MOTOR_FR                    1U
+#define APP_MOTOR_RL                    2U
+#define APP_MOTOR_RR                    3U
+
+#define APP_HALL_FAULT_BIT              (1UL << 18)
+#define APP_IMD_FAULT_BIT               (1UL << 19)
+
 #endif /* __APP_CONFIG_H__ */
